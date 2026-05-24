@@ -49,6 +49,44 @@ function parseConfigFromSearch(search) {
   return { teams, color, refresh };
 }
 
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatDate(dateStr) {
+  // Append T00:00:00 to force local midnight, avoiding UTC timezone shift
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('de-DE', {
+    weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric'
+  });
+}
+
+function getResultClass(teamId, results) {
+  const me    = results.find(r => r.team_id === teamId);
+  const other = results.find(r => r.team_id !== teamId);
+  if (!me || !other || me.pa == null) return '';
+  if (me.pa > other.pa) return 'win';
+  if (me.pa < other.pa) return 'loss';
+  return 'draw';
+}
+
+const NAME_MAP = {
+  'Nürn': 'Nürnberg Renegades', 'Nürn2': 'Nürnberg Renegades II',
+  'Spatz': 'München Spatzen', 'Würz': 'Würzburg',
+  'Lions': 'Erlangen Lions', 'LLions': 'Landsberg Lions',
+  'Kelk': 'Kelkheim Lizzards', 'Werra': 'Werratal',
+  'Bamb': 'Bamberg', 'Regen': 'Regensburg', 'Regen2': 'Regensburg 2',
+  'Ingol': 'Ingolstadt', 'Ingol2': 'Ingolstadt II',
+  'Erlangen2': 'Erlangen 2', 'Ramsenthal': 'Ramsenthal',
+  'Ramsenthal2': 'Ramsenthal II', 'Rodental': 'Rödental', 'Erding2': 'Erding II',
+};
+function resolveTeamName(abbrev) { return NAME_MAP[abbrev] || abbrev; }
+
 // ── TESTS ──
 
 test('parseConfigFromSearch: two teams', () => {
@@ -71,6 +109,37 @@ test('parseConfigFromSearch: ignores invalid team IDs', () => {
 });
 test('parseConfigFromSearch: empty returns no teams', () => {
   assertEqual(parseConfigFromSearch('').teams, []);
+});
+
+test('escapeHtml: escapes < > & " characters', () => {
+  assertEqual(escapeHtml('<script>alert("xss")</script>'),
+    '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+});
+test('escapeHtml: leaves normal strings unchanged', () => {
+  assertEqual(escapeHtml('Nürnberg Renegades'), 'Nürnberg Renegades');
+});
+test('formatDate: formats 2026-05-09 containing year and day', () => {
+  const r = formatDate('2026-05-09');
+  assertTrue(r.includes('2026'), 'got: ' + r);
+  assertTrue(r.includes('09'), 'got: ' + r);
+});
+test('getResultClass: win', () => {
+  assertEqual(getResultClass(159, [{team_id:159,pa:34},{team_id:99,pa:20}]), 'win');
+});
+test('getResultClass: loss', () => {
+  assertEqual(getResultClass(159, [{team_id:159,pa:14},{team_id:99,pa:28}]), 'loss');
+});
+test('getResultClass: draw', () => {
+  assertEqual(getResultClass(159, [{team_id:159,pa:20},{team_id:99,pa:20}]), 'draw');
+});
+test('getResultClass: null pa returns empty', () => {
+  assertEqual(getResultClass(159, [{team_id:159,pa:null},{team_id:99,pa:null}]), '');
+});
+test('resolveTeamName: known abbreviation', () => {
+  assertEqual(resolveTeamName('Nürn'), 'Nürnberg Renegades');
+});
+test('resolveTeamName: unknown returns as-is', () => {
+  assertEqual(resolveTeamName('UnknownTeam'), 'UnknownTeam');
 });
 
 document.getElementById('summary').textContent = passed + ' passed, ' + failed + ' failed';
