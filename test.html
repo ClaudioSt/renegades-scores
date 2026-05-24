@@ -69,7 +69,7 @@ function formatDate(dateStr) {
 function getResultClass(teamId, results) {
   const me    = results.find(r => r.team_id === teamId);
   const other = results.find(r => r.team_id !== teamId);
-  if (!me || !other || me.pa == null) return '';
+  if (!me || !other || me.pa == null || other.pa == null) return '';
   if (me.pa > other.pa) return 'win';
   if (me.pa < other.pa) return 'loss';
   return 'draw';
@@ -80,7 +80,7 @@ const NAME_MAP = {
   'Spatz': 'München Spatzen', 'Würz': 'Würzburg',
   'Lions': 'Erlangen Lions', 'LLions': 'Landsberg Lions',
   'Kelk': 'Kelkheim Lizzards', 'Werra': 'Werratal',
-  'Bamb': 'Bamberg', 'Regen': 'Regensburg', 'Regen2': 'Regensburg 2',
+  'Bamb': 'Bamberg', 'Regen': 'Regensburg', 'Regen2': 'Regensburg II',
   'Ingol': 'Ingolstadt', 'Ingol2': 'Ingolstadt II',
   'Erlangen2': 'Erlangen 2', 'Ramsenthal': 'Ramsenthal',
   'Ramsenthal2': 'Ramsenthal II', 'Rodental': 'Rödental', 'Erding2': 'Erding II',
@@ -111,9 +111,9 @@ test('parseConfigFromSearch: empty returns no teams', () => {
   assertEqual(parseConfigFromSearch('').teams, []);
 });
 
-test('escapeHtml: escapes < > & " characters', () => {
-  assertEqual(escapeHtml('<script>alert("xss")</script>'),
-    '&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+test('escapeHtml: escapes all five XSS characters including single-quote', () => {
+  assertEqual(escapeHtml(`<b class="x" data-a='y'>&</b>`),
+    '&lt;b class=&quot;x&quot; data-a=&#39;y&#39;&gt;&amp;&lt;/b&gt;');
 });
 test('escapeHtml: leaves normal strings unchanged', () => {
   assertEqual(escapeHtml('Nürnberg Renegades'), 'Nürnberg Renegades');
@@ -134,6 +134,12 @@ test('getResultClass: draw', () => {
 });
 test('getResultClass: null pa returns empty', () => {
   assertEqual(getResultClass(159, [{team_id:159,pa:null},{team_id:99,pa:null}]), '');
+});
+test('getResultClass: opponent pa null returns empty', () => {
+  assertEqual(getResultClass(159, [{team_id:159,pa:20},{team_id:99,pa:null}]), '');
+});
+test('getResultClass: teamId not in results returns empty', () => {
+  assertEqual(getResultClass(999, [{team_id:159,pa:20},{team_id:99,pa:14}]), '');
 });
 test('resolveTeamName: known abbreviation', () => {
   assertEqual(resolveTeamName('Nürn'), 'Nürnberg Renegades');
