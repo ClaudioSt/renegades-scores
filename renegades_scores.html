@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nürnberg Renegades – Spielplan</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #0d0d0d;
+      color: #f0f0f0;
+      padding: 20px;
+    }
+
+    .widget-wrapper {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .team-block {
+      margin-bottom: 48px;
+    }
+
+    .team-title {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #ff4500;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 24px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #ff4500;
+    }
+
+    .section-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      color: #888;
+      margin: 24px 0 12px 0;
+    }
+
+    /* LIVE BANNER */
+    .live-banner {
+      background: #ff0000;
+      color: #fff;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .live-banner .live-badge {
+      background: #fff;
+      color: #ff0000;
+      font-weight: 900;
+      font-size: 0.7rem;
+      letter-spacing: 2px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .live-banner .live-info {
+      flex: 1;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .live-banner .live-score {
+      font-size: 1.4rem;
+      font-weight: 900;
+    }
+
+    .live-banner a {
+      background: #fff;
+      color: #ff0000;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.8rem;
+      padding: 8px 14px;
+      border-radius: 6px;
+      white-space: nowrap;
+    }
+
+    /* GAMEDAY CARD */
+    .gameday-card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .gameday-header {
+      background: #222;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid #333;
+    }
+
+    .gameday-header .gd-name {
+      font-weight: 700;
+      font-size: 1rem;
+      color: #fff;
+    }
+
+    .gameday-header .gd-meta {
+      font-size: 0.75rem;
+      color: #888;
+      display: flex;
+      gap: 12px;
+    }
+
+    .gameday-header .gd-league {
+      background: #333;
+      color: #ccc;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+
+    .game-row {
+      padding: 14px 18px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #222;
+    }
+
+    .game-row:last-child {
+      border-bottom: none;
+    }
+
+    .game-row .team-home {
+      text-align: right;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .game-row .team-away {
+      text-align: left;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .team-home.highlight, .team-away.highlight {
+      color: #ff4500;
+    }
+
+    .game-row .score-box {
+      text-align: center;
+      min-width: 90px;
+    }
+
+    .score-box .time {
+      font-size: 0.75rem;
+      color: #888;
+    }
+
+    .score-box .score {
+      font-size: 1.2rem;
+      font-weight: 900;
+      color: #fff;
+    }
+
+    .score-box .score.win { color: #4caf50; }
+    .score-box .score.loss { color: #f44336; }
+    .score-box .score.draw { color: #ff9800; }
+
+    .score-box .stage-label {
+      font-size: 0.65rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .score-box .upcoming-time {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #aaa;
+    }
+
+    .no-data {
+      color: #555;
+      font-style: italic;
+      font-size: 0.9rem;
+      padding: 16px 0;
+    }
+
+    .loading {
+      color: #555;
+      font-size: 0.85rem;
+      padding: 20px 0;
+      text-align: center;
+    }
+
+    @media (max-width: 600px) {
+      .game-row {
+        grid-template-columns: 1fr auto 1fr;
+        gap: 6px;
+        padding: 12px 12px;
+      }
+      .game-row .team-home,
+      .game-row .team-away {
+        font-size: 0.8rem;
+      }
+      .score-box .score {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="widget-wrapper">
+
+  <!-- RENEGADES I -->
+  <div class="team-block">
+    <div class="team-title">🏈 Nürnberg Renegades</div>
+    <div id="renegades1-live-section"></div>
+    <div class="section-title">▼ Vergangene Spieltage</div>
+    <div id="renegades1-past"><div class="loading">Lade Daten…</div></div>
+    <div class="section-title">▲ Kommende Spieltage</div>
+    <div id="renegades1-future"><div class="loading">Lade Daten…</div></div>
+  </div>
+
+  <!-- RENEGADES II -->
+  <div class="team-block">
+    <div class="team-title">🏈 Nürnberg Renegades II</div>
+    <div id="renegades2-live-section"></div>
+    <div class="section-title">▼ Vergangene Spieltage</div>
+    <div id="renegades2-past"><div class="loading">Lade Daten…</div></div>
+    <div class="section-title">▲ Kommende Spieltage</div>
+    <div id="renegades2-future"><div class="loading">Lade Daten…</div></div>
+  </div>
+
+</div>
+
+<script>
+// ─────────────────────────────────────────────
+// CONFIGURATION
+// ─────────────────────────────────────────────
+const API_BASE = 'https://leaguesphere.app/api';
+const LIVETICKER_BASE = 'https://leaguesphere.app/liveticker/';
+
+// Known gameday IDs for each team (extend as new seasons are added)
+const CONFIG = {
+  renegades1: {
+    teamId: 159,
+    teamName: 'Nürnberg Renegades',
+    gamedayIds: [184, 229, 428, 645], // add new IDs each season
+    pastEl: 'renegades1-past',
+    futureEl: 'renegades1-future',
+    liveEl: 'renegades1-live-section',
+  },
+  renegades2: {
+    teamId: 287,
+    teamName: 'Nürnberg Renegades II',
+    gamedayIds: [832, 834, 842, 844, 845], // add new IDs each season
+    pastEl: 'renegades2-past',
+    futureEl: 'renegades2-future',
+    liveEl: 'renegades2-live-section',
+  }
+};
+
+// ─────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────
+
+async function fetchJSON(url) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return res.json();
+}
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('de-DE', { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+function getResultClass(teamId, results) {
+  const me = results.find(r => r.team_id === teamId);
+  const other = results.find(r => r.team_id !== teamId);
+  if (!me || !other || me.pa == null) return '';
+  if (me.pa > other.pa) return 'win';
+  if (me.pa < other.pa) return 'loss';
+  return 'draw';
+}
+
+function getTeamDisplayName(name) {
+  // Map short API names to full team names for display
+  const nameMap = {
+    'Nürn': 'Nürnberg Renegades',
+    'Nürn2': 'Nürnberg Renegades II',
+    'Spatz': 'Stuttgart Spatzen',
+    'Würz': 'Würzburg',
+    'Lions': 'Erlangen Lions',
+    'LLions': 'Landsberg Lions',
+    'Kelk': 'Kelkheim Lizzards',
+    'Werra': 'Werratal',
+    'Bamb': 'Bamberg',
+    'Regen': 'Regensburg',
+    'Regen2': 'Regensburg 2',
+    'Ingol': 'Ingolstadt',
+    'Ingol2': 'Ingolstadt II',
+    'Erlangen2': 'Erlangen 2',
+    'Ramsenthal': 'Ramsenthal',
+    'Ramsenthal2': 'Ramsenthal II',
+    'Rödental': 'Rödental',
+    'Erding2': 'Erding II',
+  };
+  return nameMap[name] || name;
+}
+
+// ─────────────────────────────────────────────
+// RENDER FUNCTIONS
+// ─────────────────────────────────────────────
+
+function renderGameRow(game, teamId, showScore) {
+  const home = game.results.find(r => r.isHome);
+  const away = game.results.find(r => !r.isHome);
+  if (!home || !away) return '';
+
+  const homeName = getTeamDisplayName(home.team_name);
+  const awayName = getTeamDisplayName(away.team_name);
+  const homeHighlight = home.team_id === teamId ? 'highlight' : '';
+  const awayHighlight = away.team_id === teamId ? 'highlight' : '';
+
+  let scoreHTML;
+  if (!showScore) {
+    scoreHTML = `<div class="upcoming-time">${game.scheduled.slice(0,5)} Uhr</div>`;
+  } else {
+    const resultClass = getResultClass(teamId, game.results);
+    const hs = game.halftime_score;
+    const fs = game.final_score;
+    scoreHTML = `
+      <div class="score ${resultClass}">${fs.home} : ${fs.away}</div>
+      <div class="stage-label">HZ: ${hs.home}:${hs.away}</div>
+    `;
+  }
+
+  return `
+    <div class="game-row">
+      <div class="team-home ${homeHighlight}">${homeName}</div>
+      <div class="score-box">
+        <div class="time">${game.scheduled.slice(0,5)} Uhr · Feld ${game.field}</div>
+        ${scoreHTML}
+        <div class="stage-label">${game.stage}${game.standing ? ' · ' + game.standing : ''}</div>
+      </div>
+      <div class="team-away ${awayHighlight}">${awayName}</div>
+    </div>
+  `;
+}
+
+function renderGamedayCard(gd, games, teamId, showScore) {
+  const teamGames = games.filter(g =>
+    g.results.some(r => r.team_id === teamId)
+  );
+  if (teamGames.length === 0) return '';
+
+  const rows = teamGames.map(g => renderGameRow(g, teamId, showScore)).join('');
+
+  return `
+    <div class="gameday-card">
+      <div class="gameday-header">
+        <div>
+          <div class="gd-name">${gd.name}</div>
+          <div class="gd-meta">
+            <span>📅 ${formatDate(gd.date)}</span>
+            <span>🕙 ${gd.start} Uhr</span>
+            ${gd.address ? `<span>📍 ${gd.address.split(',')[0]}</span>` : ''}
+          </div>
+        </div>
+        <div class="gd-league">${gd.league_display}</div>
+      </div>
+      ${rows}
+    </div>
+  `;
+}
+
+function renderLiveGame(game, gd, teamId) {
+  const home = game.results.find(r => r.isHome);
+  const away = game.results.find(r => !r.isHome);
+  if (!home || !away) return '';
+
+  const homeName = getTeamDisplayName(home.team_name);
+  const awayName = getTeamDisplayName(away.team_name);
+  const hs = game.halftime_score;
+
+  const tickerUrl = `${LIVETICKER_BASE}?gameday=${gd.id}`;
+
+  return `
+    <div class="live-banner">
+      <span class="live-badge">● LIVE</span>
+      <div class="live-info">
+        ${homeName} vs. ${awayName}<br>
+        <small>${gd.name} · ${gd.league_display}</small>
+      </div>
+      <div class="live-score">${hs.home} : ${hs.away}</div>
+      <a href="${tickerUrl}" target="_blank">🔴 Liveticker</a>
+    </div>
+  `;
+}
+
+// ─────────────────────────────────────────────
+// MAIN LOADER
+// ─────────────────────────────────────────────
+
+async function loadTeam(cfg) {
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Fetch all gamedays + their games in parallel
+  const results = await Promise.all(
+    cfg.gamedayIds.map(async id => {
+      const [gd, games] = await Promise.all([
+        fetchJSON(`${API_BASE}/gamedays/${id}/?format=json`),
+        fetchJSON(`${API_BASE}/gamedays/${id}/games/?format=json`)
+      ]);
+      return { gd, games };
+    })
+  );
+
+  const past = [];
+  const future = [];
+  const live = [];
+
+  for (const { gd, games } of results) {
+    const hasTeamGames = games.some(g => g.results.some(r => r.team_id === cfg.teamId));
+    if (!hasTeamGames) continue;
+
+    const teamGames = games.filter(g => g.results.some(r => r.team_id === cfg.teamId));
+    const isLive = teamGames.some(g => g.status === 'live');
+    const isPast = gd.date < today;
+    const isFuture = gd.date > today;
+    const isToday = gd.date === today;
+
+    if (isLive || (isToday && teamGames.some(g => ['live', 'Geplant'].includes(g.status)))) {
+      // Mark as live or today
+      teamGames.filter(g => g.status === 'live').forEach(g => live.push({ game: g, gd }));
+    }
+
+    if (isPast || (isToday && teamGames.every(g => g.status === 'beendet'))) {
+      past.push({ gd, games });
+    } else if (isFuture || isToday) {
+      future.push({ gd, games });
+    }
+  }
+
+  // Sort: past descending (newest first), future ascending (soonest first)
+  past.sort((a, b) => b.gd.date.localeCompare(a.gd.date));
+  future.sort((a, b) => a.gd.date.localeCompare(b.gd.date));
+
+  // Render LIVE
+  const liveEl = document.getElementById(cfg.liveEl);
+  if (live.length > 0) {
+    liveEl.innerHTML = '<div class="section-title">🔴 Live jetzt</div>' +
+      live.map(({ game, gd }) => renderLiveGame(game, gd, cfg.teamId)).join('');
+  }
+
+  // Render PAST
+  const pastEl = document.getElementById(cfg.pastEl);
+  if (past.length === 0) {
+    pastEl.innerHTML = '<div class="no-data">Keine vergangenen Spieltage gefunden.</div>';
+  } else {
+    pastEl.innerHTML = past.map(({ gd, games }) =>
+      renderGamedayCard(gd, games, cfg.teamId, true)
+    ).join('');
+  }
+
+  // Render FUTURE
+  const futureEl = document.getElementById(cfg.futureEl);
+  if (future.length === 0) {
+    futureEl.innerHTML = '<div class="no-data">Keine kommenden Spieltage geplant.</div>';
+  } else {
+    futureEl.innerHTML = future.map(({ gd, games }) =>
+      renderGamedayCard(gd, games, cfg.teamId, false)
+    ).join('');
+  }
+}
+
+// ─────────────────────────────────────────────
+// INIT
+// ─────────────────────────────────────────────
+(async () => {
+  try {
+    await Promise.all([
+      loadTeam(CONFIG.renegades1),
+      loadTeam(CONFIG.renegades2),
+    ]);
+  } catch (err) {
+    console.error('Widget Fehler:', err);
+  }
+})();
+</script>
+</body>
+</html>
