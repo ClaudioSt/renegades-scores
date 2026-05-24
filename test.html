@@ -87,6 +87,48 @@ const NAME_MAP = {
 };
 function resolveTeamName(abbrev) { return NAME_MAP[abbrev] || abbrev; }
 
+const CACHE_VERSION = 1;
+
+function cacheKey(teamId) { return 'lsw_' + teamId; }
+
+function loadCache(teamId, storage) {
+  const store = storage || localStorage;
+  try {
+    const raw = store.getItem(cacheKey(teamId));
+    if (!raw) return null;
+    const cache = JSON.parse(raw);
+    if (cache.version !== CACHE_VERSION) return null;
+    return cache;
+  } catch { return null; }
+}
+
+function saveCache(teamId, data, storage) {
+  const store = storage || localStorage;
+  try {
+    store.setItem(cacheKey(teamId), JSON.stringify(Object.assign({}, data, { version: CACHE_VERSION })));
+    return true;
+  } catch { return false; }
+}
+
+function clearCache(teamId, storage) {
+  const store = storage || localStorage;
+  try { store.removeItem(cacheKey(teamId)); } catch {}
+}
+
+function needsDiscovery(cache) {
+  if (!cache) return true;
+  return new Date(cache.next_discovery) <= new Date();
+}
+
+function makeStorage() {
+  const store = {};
+  return {
+    getItem:    function(k)    { return k in store ? store[k] : null; },
+    setItem:    function(k, v) { store[k] = v; },
+    removeItem: function(k)    { delete store[k]; },
+  };
+}
+
 // ── TESTS ──
 
 test('parseConfigFromSearch: two teams', () => {
@@ -146,6 +188,36 @@ test('resolveTeamName: known abbreviation', () => {
 });
 test('resolveTeamName: unknown returns as-is', () => {
   assertEqual(resolveTeamName('UnknownTeam'), 'UnknownTeam');
+});
+
+test('loadCache: returns null when empty', () => {
+  assertEqual(loadCache(999, makeStorage()), null);
+});
+test('saveCache + loadCache: round-trip', () => {
+  const s = makeStorage();
+  saveCache(999, { past: [], active_ids: [1,2], scanned_at: 'x', next_discovery: '2099-01-01T00:00:00Z' }, s);
+  const c = loadCache(999, s);
+  assertEqual(c.active_ids, [1, 2]);
+  assertEqual(c.version, 1);
+});
+test('loadCache: ignores wrong cache version', () => {
+  const s = makeStorage();
+  s.setItem('lsw_999', JSON.stringify({ version: 99, past: [] }));
+  assertEqual(loadCache(999, s), null);
+});
+test('loadCache: returns null on corrupt JSON', () => {
+  const s = makeStorage();
+  s.setItem('lsw_999', 'not-json');
+  assertEqual(loadCache(999, s), null);
+});
+test('needsDiscovery: true when cache is null', () => {
+  assertTrue(needsDiscovery(null));
+});
+test('needsDiscovery: true when next_discovery is in the past', () => {
+  assertTrue(needsDiscovery({ next_discovery: '2020-01-01T00:00:00Z' }));
+});
+test('needsDiscovery: false when next_discovery is in the future', () => {
+  assertFalse(needsDiscovery({ next_discovery: '2099-01-01T00:00:00Z' }));
 });
 
 document.getElementById('summary').textContent = passed + ' passed, ' + failed + ' failed';
