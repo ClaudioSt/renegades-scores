@@ -129,6 +129,17 @@ function makeStorage() {
   };
 }
 
+async function batchedAll(items, asyncFn, batchSize, onBatchDone) {
+  const results = [];
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch       = items.slice(i, i + batchSize);
+    const batchResult = await Promise.all(batch.map(asyncFn));
+    results.push.apply(results, batchResult);
+    if (onBatchDone) onBatchDone(results.length, items.length);
+  }
+  return results;
+}
+
 // ── TESTS ──
 
 test('parseConfigFromSearch: two teams', () => {
@@ -237,7 +248,37 @@ test('saveCache: does not mutate input data', () => {
   assertEqual(data.version, undefined);
 });
 
-document.getElementById('summary').textContent = passed + ' passed, ' + failed + ' failed';
+(async function() {
+  // async test: maps all items
+  try {
+    const r = await batchedAll([1,2,3,4,5], async function(x) { return x * 2; }, 2);
+    assertEqual(r, [2,4,6,8,10]);
+    out.insertAdjacentHTML('beforeend', '<div class="pass">OK batchedAll: maps all items in batches of 2</div>');
+    passed++;
+  } catch(e) {
+    out.insertAdjacentHTML('beforeend', '<div class="fail">FAIL batchedAll: ' + esc(e.message) + '</div>');
+    failed++;
+  }
+
+  // async test: respects batch size concurrency
+  try {
+    let concurrent = 0, maxConcurrent = 0;
+    await batchedAll([1,2,3,4,5,6], async function(x) {
+      concurrent++;
+      maxConcurrent = Math.max(maxConcurrent, concurrent);
+      await new Promise(function(r) { setTimeout(r, 5); });
+      concurrent--;
+    }, 3);
+    assertTrue(maxConcurrent <= 3, 'max concurrent was ' + maxConcurrent + ', expected <= 3');
+    out.insertAdjacentHTML('beforeend', '<div class="pass">OK batchedAll: concurrency capped at batchSize (max=' + maxConcurrent + ')</div>');
+    passed++;
+  } catch(e) {
+    out.insertAdjacentHTML('beforeend', '<div class="fail">FAIL batchedAll concurrency: ' + esc(e.message) + '</div>');
+    failed++;
+  }
+
+  document.getElementById('summary').textContent = passed + ' passed, ' + failed + ' failed';
+})();
 </script>
 </body>
 </html>
