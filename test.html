@@ -116,7 +116,7 @@ function clearCache(teamId, storage) {
 }
 
 function needsDiscovery(cache) {
-  if (!cache) return true;
+  if (!cache || !cache.next_discovery) return true;
   return new Date(cache.next_discovery) <= new Date();
 }
 
@@ -218,6 +218,23 @@ test('needsDiscovery: true when next_discovery is in the past', () => {
 });
 test('needsDiscovery: false when next_discovery is in the future', () => {
   assertFalse(needsDiscovery({ next_discovery: '2099-01-01T00:00:00Z' }));
+});
+test('saveCache: returns true on success', () => {
+  assertTrue(saveCache(1, { next_discovery: '2099-01-01T00:00:00Z' }, makeStorage()));
+});
+test('saveCache: returns false when storage throws', () => {
+  const bad = { getItem: () => null, setItem: () => { throw new Error('quota'); }, removeItem: () => {} };
+  assertFalse(saveCache(1, { next_discovery: '2099-01-01T00:00:00Z' }, bad));
+});
+test('clearCache: no-op on missing key', () => {
+  clearCache(999, makeStorage());
+  assertTrue(true);
+});
+test('saveCache: does not mutate input data', () => {
+  const s = makeStorage();
+  const data = { next_discovery: '2099-01-01T00:00:00Z' };
+  saveCache(1, data, s);
+  assertEqual(data.version, undefined);
 });
 
 document.getElementById('summary').textContent = passed + ' passed, ' + failed + ' failed';
