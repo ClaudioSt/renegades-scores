@@ -140,6 +140,21 @@ async function batchedAll(items, asyncFn, batchSize, onBatchDone) {
   return results;
 }
 
+// Returns 'past' | 'active' | null
+// null  = team not present in this gameday
+// past  = all team games beendet AND date <= today
+// active = anything else (future, today with open games, live)
+function classifyGameday(gd, games, teamId, today) {
+  const t = today || new Date().toISOString().slice(0, 10);
+  const teamGames = games.filter(function(g) {
+    return g.results.some(function(r) { return r.team_id === teamId; });
+  });
+  if (teamGames.length === 0) return null;
+  const allDone = teamGames.every(function(g) { return g.status === 'beendet'; });
+  if (gd.date <= t && allDone) return 'past';
+  return 'active';
+}
+
 // ── TESTS ──
 
 test('parseConfigFromSearch: two teams', () => {
@@ -246,6 +261,36 @@ test('saveCache: does not mutate input data', () => {
   const data = { next_discovery: '2099-01-01T00:00:00Z' };
   saveCache(1, data, s);
   assertEqual(data.version, undefined);
+});
+
+const TODAY = '2026-05-25';
+function makeGame(teamId, status) {
+  return {
+    status: status,
+    results: [
+      { team_id: teamId, pa: 20, isHome: true },
+      { team_id: 99,     pa: 14, isHome: false }
+    ]
+  };
+}
+
+test('classifyGameday: past when date before today and all beendet', () => {
+  assertEqual(classifyGameday({date:'2026-01-01'}, [makeGame(159,'beendet')], 159, TODAY), 'past');
+});
+test('classifyGameday: past when date equals today and all beendet', () => {
+  assertEqual(classifyGameday({date:TODAY}, [makeGame(159,'beendet')], 159, TODAY), 'past');
+});
+test('classifyGameday: active when date in future', () => {
+  assertEqual(classifyGameday({date:'2099-01-01'}, [makeGame(159,'Geplant')], 159, TODAY), 'active');
+});
+test('classifyGameday: active when old date but game still live', () => {
+  assertEqual(classifyGameday({date:'2026-01-01'}, [makeGame(159,'live')], 159, TODAY), 'active');
+});
+test('classifyGameday: null when team not in gameday', () => {
+  assertEqual(classifyGameday({date:'2026-01-01'}, [makeGame(999,'beendet')], 159, TODAY), null);
+});
+test('classifyGameday: null when no games at all', () => {
+  assertEqual(classifyGameday({date:'2026-01-01'}, [], 159, TODAY), null);
 });
 
 (async function() {
