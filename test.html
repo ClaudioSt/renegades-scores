@@ -18,13 +18,17 @@
 let passed = 0, failed = 0;
 const out = document.getElementById('results');
 
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
 function test(name, fn) {
   try {
     fn();
-    out.insertAdjacentHTML('beforeend', '<div class="pass">OK ' + name + '</div>');
+    out.insertAdjacentHTML('beforeend', '<div class="pass">OK ' + esc(name) + '</div>');
     passed++;
   } catch (e) {
-    out.insertAdjacentHTML('beforeend', '<div class="fail">FAIL ' + name + ': ' + e.message + '</div>');
+    out.insertAdjacentHTML('beforeend', '<div class="fail">FAIL ' + esc(name) + ': ' + esc(e.message) + '</div>');
     failed++;
   }
 }
@@ -37,7 +41,37 @@ function assertFalse(val, msg) { if (val)  throw new Error(msg || 'Expected fals
 
 // ── PURE FUNCTIONS UNDER TEST (paste from widget.html after each task) ──
 
+function parseConfigFromSearch(search) {
+  const params  = new URLSearchParams(search);
+  const teams   = params.getAll('t').map(Number).filter(n => Number.isInteger(n) && n > 0);
+  const color   = (params.get('color') || 'ff4500').replace(/^#/, '');
+  const refresh = params.has('refresh');
+  return { teams, color, refresh };
+}
+
 // ── TESTS ──
+
+test('parseConfigFromSearch: two teams', () => {
+  const r = parseConfigFromSearch('?t=159&t=287&color=ff4500');
+  assertEqual(r.teams, [159, 287]);
+  assertEqual(r.color, 'ff4500');
+  assertFalse(r.refresh);
+});
+test('parseConfigFromSearch: default color', () => {
+  assertEqual(parseConfigFromSearch('?t=42').color, 'ff4500');
+});
+test('parseConfigFromSearch: strips # from color', () => {
+  assertEqual(parseConfigFromSearch('?t=1&color=%23ff0000').color, 'ff0000');
+});
+test('parseConfigFromSearch: refresh flag', () => {
+  assertTrue(parseConfigFromSearch('?t=1&refresh=1').refresh);
+});
+test('parseConfigFromSearch: ignores invalid team IDs', () => {
+  assertEqual(parseConfigFromSearch('?t=abc&t=0&t=159').teams, [159]);
+});
+test('parseConfigFromSearch: empty returns no teams', () => {
+  assertEqual(parseConfigFromSearch('').teams, []);
+});
 
 document.getElementById('summary').textContent = passed + ' passed, ' + failed + ' failed';
 </script>
