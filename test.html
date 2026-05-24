@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Widget Tests</title>
+  <style>
+    body { font-family: monospace; background: #111; color: #eee; padding: 20px; }
+    .pass { color: #4caf50; }
+    .fail { color: #f44336; }
+    #summary { margin-top: 20px; font-size: 1.2rem; font-weight: bold; }
+  </style>
+</head>
+<body>
+<h1>Widget Unit Tests</h1>
+<div id="results"></div>
+<div id="summary"></div>
+<script>
+let passed = 0, failed = 0;
+const out = document.getElementById('results');
+
+function test(name, fn) {
+  try {
+    fn();
+    out.insertAdjacentHTML('beforeend', '<div class="pass">OK ' + name + '</div>');
+    passed++;
+  } catch (e) {
+    out.insertAdjacentHTML('beforeend', '<div class="fail">FAIL ' + name + ': ' + e.message + '</div>');
+    failed++;
+  }
+}
+function assertEqual(a, b, msg) {
+  const as = JSON.stringify(a), bs = JSON.stringify(b);
+  if (as !== bs) throw new Error(msg || 'Expected ' + bs + ', got ' + as);
+}
+function assertTrue(val, msg)  { if (!val) throw new Error(msg || 'Expected truthy, got ' + JSON.stringify(val)); }
+function assertFalse(val, msg) { if (val)  throw new Error(msg || 'Expected falsy, got ' + JSON.stringify(val)); }
+
+// ── PURE FUNCTIONS UNDER TEST (paste from widget.html after each task) ──
+
+// ── TESTS ──
+
+document.getElementById('summary').textContent = passed + ' passed, ' + failed + ' failed';
+</script>
+</body>
+</html>
