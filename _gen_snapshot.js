@@ -69,9 +69,9 @@ function slimGame(g) {
   }, BATCH_SIZE);
 
   const snapshot = { generated: TODAY, gamedays: withGames };
-  const js       = 'var GAMEDAY_SNAPSHOT = ' + JSON.stringify(snapshot) + ';';
+  const json     = JSON.stringify(snapshot);
 
-  require('fs').writeFileSync('_snapshot.js', js, 'utf8');
-  const kb = (Buffer.byteLength(js, 'utf8') / 1024).toFixed(1);
-  console.log('Written _snapshot.js (' + kb + ' KB)');
+  require('fs').writeFileSync('snapshot.json', json, 'utf8');
+  const kb = (Buffer.byteLength(json, 'utf8') / 1024).toFixed(1);
+  console.log('Written snapshot.json (' + kb + ' KB)');
 })().catch(e => { console.error(e); process.exit(1); });
