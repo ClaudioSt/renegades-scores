@@ -485,8 +485,10 @@ async function loadTeam(teamId, els) {
       await loadTeam(teamId, elMap[teamId]);
     } catch(err) {
       console.error('Widget error (team ' + teamId + '):', err);
-      elMap[teamId].future.innerHTML =
-        '<div class="error-banner">Fehler beim Laden: ' + escapeHtml(err.message) + '</div>';
+      var errBanner = '<div class="error-banner">Fehler beim Laden: ' + escapeHtml(err.message) + '</div>';
+      elMap[teamId].future.innerHTML = errBanner; // escapeHtml applied to err.message above
+      if (elMap[teamId].past.querySelector('.loading'))
+        elMap[teamId].past.innerHTML = errBanner; // same safe string
     }
   }));
 })();
