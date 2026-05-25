@@ -180,7 +180,25 @@ function buildTeams(withGames, teamNameMap) {
         return Object.assign({}, gd, { games: [] });
       }
     }, BATCH_SIZE, BATCH_DELAY_MS);
-    if (failed) console.warn('  WARNING: ' + failed + ' gamedays failed to fetch (will show empty games)');
+    if (failed) console.warn('  WARNING: ' + failed + ' gamedays failed to fetch — will retry');
+  }
+
+  // Retry pass: sequentially re-fetch any gameday that came back empty
+  const emptyGds = withGames.filter(gd => gd.games.length === 0);
+  if (emptyGds.length) {
+    console.log('Retry pass: ' + emptyGds.length + ' empty gamedays…');
+    let recovered = 0;
+    for (let i = 0; i < emptyGds.length; i++) {
+      const gd = emptyGds[i];
+      try {
+        const games = await fetchJSON(API_BASE + '/gamedays/' + gd.id + '/games/?format=json');
+        if (games.length > 0) { gd.games = games.map(slimGame); recovered++; }
+      } catch(e) {}
+      process.stdout.write('\r  ' + (i + 1) + ' / ' + emptyGds.length + '  recovered: ' + recovered + '  ');
+      if (i + 1 < emptyGds.length) await new Promise(r => setTimeout(r, 1500));
+    }
+    process.stdout.write('\n');
+    console.log('  ' + recovered + ' / ' + emptyGds.length + ' recovered');
   }
 
   console.log('Fetching team names…');
