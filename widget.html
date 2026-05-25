@@ -133,17 +133,8 @@ function getResultClass(teamId, results) {
   return 'draw';
 }
 
-var NAME_MAP = {
-  'Nürn': 'Nürnberg Renegades', 'Nürn2': 'Nürnberg Renegades II',
-  'Spatz': 'München Spatzen', 'Würz': 'Würzburg',
-  'Lions': 'Erlangen Lions', 'LLions': 'Landsberg Lions',
-  'Kelk': 'Kelkheim Lizzards', 'Werra': 'Werratal',
-  'Bamb': 'Bamberg', 'Regen': 'Regensburg', 'Regen2': 'Regensburg II',
-  'Ingol': 'Ingolstadt', 'Ingol2': 'Ingolstadt II',
-  'Erlangen2': 'Erlangen 2', 'Ramsenthal': 'Ramsenthal',
-  'Ramsenthal2': 'Ramsenthal II', 'Rodental': 'Rödental', 'Erding2': 'Erding II',
-};
-function resolveTeamName(abbrev) { return NAME_MAP[abbrev] || abbrev; }
+var _teamNameByAbbrev = {};
+function resolveTeamName(abbrev) { return _teamNameByAbbrev[abbrev] || abbrev; }
 
 // ── CACHE ────────────────────────────────────────────────────────────────────
 function cacheKey(teamId) { return 'lsw_' + teamId; }
@@ -213,7 +204,10 @@ var _snapshotPromise = null;
 async function loadSnapshot() {
   if (!_snapshotPromise) {
     var base = window.location.href.replace(/[^/]*$/, '');
-    _snapshotPromise = fetchJSON(base + 'snapshot.json');
+    _snapshotPromise = fetchJSON(base + 'snapshot.json').then(function(snap) {
+      snap.teams.forEach(function(t) { _teamNameByAbbrev[t.abbrev] = t.name; });
+      return snap;
+    });
   }
   return _snapshotPromise;
 }

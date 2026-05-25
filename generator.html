@@ -134,18 +134,7 @@ var _teamListPromise = null;
 function getTeamList() {
   if (_teamListPromise) return _teamListPromise;
   _teamListPromise = loadSnapshot().then(function(snap) {
-    var seen = {};
-    snap.gamedays.forEach(function(gd) {
-      (gd.games || []).forEach(function(g) {
-        (g.results || []).forEach(function(r) {
-          if (!seen[r.team_id]) seen[r.team_id] = r.team_name;
-        });
-      });
-    });
-    return Object.keys(seen).map(function(id) {
-      var abbrev = seen[id];
-      return { id: Number(id), abbrev: abbrev, name: resolveTeamName(abbrev) };
-    }).sort(function(a, b) { return a.name.localeCompare(b.name, 'de'); });
+    return snap.teams;
   });
   return _teamListPromise;
 }
