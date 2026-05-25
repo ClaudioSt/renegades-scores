@@ -106,11 +106,20 @@ document.getElementById('add-team-btn').addEventListener('click', function() {
   document.getElementById('teams-container').appendChild(row);
 });
 
+var _snapshotPromise = null;
+async function loadSnapshot() {
+  if (!_snapshotPromise) {
+    var base = window.location.href.replace(/[^/]*$/, '');
+    _snapshotPromise = fetch(base + 'snapshot.json').then(function(r) { return r.json(); });
+  }
+  return _snapshotPromise;
+}
+
 async function findTeamAbbrev(teamId) {
   try {
-    var data  = await fetch(API_BASE + '/gamedays/?format=json&page_size=20').then(function(r) { return r.json(); });
-    for (var i = 0; i < data.results.length; i++) {
-      var games = await fetch(API_BASE + '/gamedays/' + data.results[i].id + '/games/?format=json').then(function(r) { return r.json(); });
+    var snap = await loadSnapshot();
+    for (var i = 0; i < snap.gamedays.length; i++) {
+      var games = snap.gamedays[i].games || [];
       for (var j = 0; j < games.length; j++) {
         var found = games[j].results.find(function(r) { return r.team_id === teamId; });
         if (found) return found.team_name;
