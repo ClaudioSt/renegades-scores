@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spielplan Widget</title>
+  <style>
+    :root { --accent: #ff4500; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0d0d0d; color: #f0f0f0; padding: 20px; }
+    .widget-wrapper { max-width: 900px; margin: 0 auto; }
+    .team-block { margin-bottom: 48px; }
+    .team-title {
+      font-size: 1.6rem; font-weight: 800; color: var(--accent);
+      text-transform: uppercase; letter-spacing: 2px;
+      margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--accent);
+    }
+    .section-title {
+      font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 3px; color: #888; margin: 24px 0 12px 0;
+    }
+    .progress-wrap { margin: 12px 0; }
+    .progress-bar-bg { background: #222; border-radius: 4px; height: 6px; overflow: hidden; }
+    .progress-bar-fg { background: var(--accent); height: 6px; border-radius: 4px; transition: width 0.2s ease; }
+    .progress-label { font-size: 0.75rem; color: #666; margin-top: 6px; }
+    .live-banner {
+      background: #ff0000; color: #fff; border-radius: 8px;
+      padding: 16px 20px; margin-bottom: 12px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .live-banner .live-badge {
+      background: #fff; color: #ff0000; font-weight: 900;
+      font-size: 0.7rem; letter-spacing: 2px; padding: 3px 8px;
+      border-radius: 4px; animation: blink 1s infinite;
+    }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .live-banner .live-info { flex: 1; font-size: 1rem; font-weight: 600; }
+    .live-banner .live-score { font-size: 1.4rem; font-weight: 900; }
+    .live-banner a {
+      background: #fff; color: #ff0000; text-decoration: none;
+      font-weight: 700; font-size: 0.8rem; padding: 8px 14px;
+      border-radius: 6px; white-space: nowrap;
+    }
+    .gameday-card {
+      background: #1a1a1a; border: 1px solid #2a2a2a;
+      border-radius: 10px; margin-bottom: 16px; overflow: hidden;
+    }
+    .gameday-header {
+      background: #222; padding: 12px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; border-bottom: 1px solid #333;
+    }
+    .gameday-header .gd-name { font-weight: 700; font-size: 1rem; color: #fff; }
+    .gameday-header .gd-meta { font-size: 0.75rem; color: #888; display: flex; gap: 12px; }
+    .gameday-header .gd-league {
+      background: #333; color: #ccc; padding: 2px 8px;
+      border-radius: 4px; font-size: 0.7rem; font-weight: 600;
+    }
+    .game-row {
+      padding: 14px 18px; display: grid;
+      grid-template-columns: 1fr auto 1fr; align-items: center;
+      gap: 12px; border-bottom: 1px solid #222;
+    }
+    .game-row:last-child { border-bottom: none; }
+    .game-row .team-home { text-align: right; font-weight: 600; font-size: 0.95rem; }
+    .game-row .team-away { text-align: left;  font-weight: 600; font-size: 0.95rem; }
+    .team-home.highlight, .team-away.highlight { color: var(--accent); }
+    .game-row .score-box { text-align: center; min-width: 90px; }
+    .score-box .time { font-size: 0.75rem; color: #888; }
+    .score-box .score { font-size: 1.2rem; font-weight: 900; color: #fff; }
+    .score-box .score.win  { color: #4caf50; }
+    .score-box .score.loss { color: #f44336; }
+    .score-box .score.draw { color: #ff9800; }
+    .score-box .stage-label { font-size: 0.65rem; color: #666; text-transform: uppercase; letter-spacing: 1px; }
+    .score-box .upcoming-time { font-size: 0.85rem; font-weight: 700; color: #aaa; }
+    .no-data { color: #555; font-style: italic; font-size: 0.9rem; padding: 16px 0; }
+    .loading  { color: #555; font-size: 0.85rem; padding: 20px 0; text-align: center; }
+    .error-banner {
+      background: #2a1010; border: 1px solid #5a2020;
+      border-radius: 8px; padding: 12px 16px;
+      color: #f44336; font-size: 0.85rem; margin-bottom: 12px;
+    }
+    @media (max-width: 600px) {
+      .game-row { gap: 6px; padding: 12px; }
+      .game-row .team-home, .game-row .team-away { font-size: 0.8rem; }
+      .score-box .score { font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+<div class="widget-wrapper" id="root"></div>
+<script>
+// JS added in Tasks 8-12
+</script>
+</body>
+</html>
