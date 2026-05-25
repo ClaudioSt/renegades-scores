@@ -43,6 +43,9 @@
     .copy-confirm.show { opacity: 1; }
     .preview-link { margin-top: 12px; }
     .preview-link a { color: #ff4500; font-size: 0.85rem; }
+    #preview-frame-wrap { margin-top: 32px; display: none; }
+    #preview-frame-wrap h2 { font-size: 1rem; margin-bottom: 12px; color: #ccc; }
+    #preview-frame { width: 100%; height: 800px; border: 1px solid #333; border-radius: 6px; }
   </style>
 </head>
 <body>
@@ -74,8 +77,13 @@
       <span class="copy-confirm" id="copy-confirm">Kopiert!</span>
     </div>
     <div class="preview-link">
-      <a id="preview-link" href="#" target="_blank">Vorschau öffnen</a>
+      <a id="preview-link" href="#" target="_blank">In neuem Tab öffnen</a>
     </div>
+  </div>
+
+  <div id="preview-frame-wrap">
+    <h2>Vorschau</h2>
+    <iframe id="preview-frame" frameborder="0"></iframe>
   </div>
 </div>
 
@@ -155,6 +163,8 @@ document.getElementById('generate-btn').addEventListener('click', async function
   document.getElementById('embed-output').value = embedCode;
   document.getElementById('preview-link').href  = src;
   document.getElementById('output-section').style.display = 'block';
+  document.getElementById('preview-frame').src             = src;
+  document.getElementById('preview-frame-wrap').style.display = 'block';
 });
 
 document.getElementById('copy-btn').addEventListener('click', function() {
