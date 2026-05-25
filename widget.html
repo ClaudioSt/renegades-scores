@@ -85,6 +85,14 @@
       .game-row .team-home, .game-row .team-away { font-size: 0.8rem; }
       .score-box .score { font-size: 1rem; }
     }
+    .more-gamedays { margin-top: 8px; }
+    .more-gamedays summary {
+      cursor: pointer; font-size: 0.8rem; font-weight: 700; color: #888;
+      text-transform: uppercase; letter-spacing: 2px; padding: 10px 0; list-style: none;
+    }
+    .more-gamedays summary::-webkit-details-marker { display: none; }
+    .more-gamedays summary::before { content: '▶  '; }
+    .more-gamedays[open] summary::before { content: '▼  '; }
   </style>
 </head>
 <body>
@@ -96,7 +104,7 @@ var API_BASE          = 'https://leaguesphere.app/api';
 var LIVETICKER_BASE   = 'https://leaguesphere.app/liveticker/';
 var BATCH_SIZE        = 50;
 var DISCOVERY_TTL_MS  = 7 * 24 * 60 * 60 * 1000;
-var CACHE_VERSION     = 2;
+var CACHE_VERSION     = 3;
 
 // ── URL PARAMS ───────────────────────────────────────────────────────────────
 function parseConfigFromSearch(search) {
@@ -128,8 +136,8 @@ function getResultClass(teamId, results) {
   var me    = results.find(function(r) { return r.team_id === teamId; });
   var other = results.find(function(r) { return r.team_id !== teamId; });
   if (!me || !other || me.pa == null || other.pa == null) return '';
-  if (me.pa > other.pa) return 'win';
-  if (me.pa < other.pa) return 'loss';
+  if (me.pa < other.pa) return 'win';   // pa = points against; fewer points against = win
+  if (me.pa > other.pa) return 'loss';
   return 'draw';
 }
 
@@ -187,8 +195,9 @@ function classifyGameday(gd, games, teamId, today) {
     return g.results.some(function(r) { return r.team_id === teamId; });
   });
   if (teamGames.length === 0) return null;
+  if (gd.date < t) return 'past';
   var allDone = teamGames.every(function(g) { return g.status === 'beendet'; });
-  if (gd.date <= t && allDone) return 'past';
+  if (allDone) return 'past';
   return 'active';
 }
 
@@ -478,11 +487,21 @@ async function loadTeam(teamId, els) {
     els.live.innerHTML = '';
   }
 
-  // Past section
+  // Past section — show last 3, rest collapsible
   var pastSorted = cache.past.slice().sort(function(a,b) { return b.gd.date.localeCompare(a.gd.date); });
-  els.past.innerHTML = pastSorted.length
-    ? pastSorted.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('')
-    : '<div class="no-data">Keine vergangenen Spieltage gefunden.</div>';
+  if (!pastSorted.length) {
+    els.past.innerHTML = '<div class="no-data">Keine vergangenen Spieltage gefunden.</div>';
+  } else {
+    var visible = pastSorted.slice(0, 3);
+    var hidden  = pastSorted.slice(3);
+    var html    = visible.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('');
+    if (hidden.length) {
+      html += '<details class="more-gamedays"><summary>' + hidden.length + ' ältere Spieltage</summary>'
+        + hidden.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('')
+        + '</details>';
+    }
+    els.past.innerHTML = html;
+  }
 
   // Future/active section
   var futureEntries = activeEntries
