@@ -263,7 +263,7 @@ function renderLiveBanner(game, gd, teamId) {
   return '<div class="live-banner">'
     + '<span class="live-badge">● LIVE</span>'
     + '<div class="live-info">' + homeName + ' vs. ' + awayName + '<br><small>' + gdName + ' · ' + league + '</small></div>'
-    + '<div class="live-score">' + game.halftime_score.home + ' : ' + game.halftime_score.away + '</div>'
+    + '<div class="live-score">' + (function(hs){ return (hs && hs.home != null && hs.away != null) ? hs.home + ' : ' + hs.away : '– : –'; })(game.halftime_score) + '</div>'
     + '<a href="' + tickerUrl + '" target="_blank">🔴 Liveticker</a>'
     + '</div>';
 }
@@ -289,8 +289,13 @@ function renderGameRow(game, teamId, showScore) {
     var cls = getResultClass(teamId, game.results);
     var hs  = game.halftime_score;
     var fs  = game.final_score;
-    scoreHTML = '<div class="score ' + cls + '">' + fs.home + ' : ' + fs.away + '</div>'
-      + '<div class="stage-label">HZ: ' + hs.home + ':' + hs.away + '</div>';
+    if (!fs) {
+      scoreHTML = '<div class="score">(kein Ergebnis)</div>';
+    } else {
+      var hzStr = (hs && hs.home != null) ? hs.home + ':' + hs.away : '?:?';
+      scoreHTML = '<div class="score ' + cls + '">' + fs.home + ' : ' + fs.away + '</div>'
+        + '<div class="stage-label">HZ: ' + hzStr + '</div>';
+    }
   }
 
   return '<div class="game-row">'
@@ -333,7 +338,7 @@ function resolveTeamAbbrev(teamId, entries) {
   for (var i = 0; i < entries.length; i++) {
     var games = entries[i].games;
     for (var j = 0; j < games.length; j++) {
-      var r = games[j].results.find(function(r) { return r.team_id === teamId; });
+      var r = games[j].results.find(function(result) { return result.team_id === teamId; });
       if (r) return r.team_name;
     }
   }
