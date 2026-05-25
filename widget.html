@@ -344,6 +344,152 @@ function resolveTeamAbbrev(teamId, entries) {
   }
   return String(teamId);
 }
+
+// ── LOAD TEAM ────────────────────────────────────────────────────────────────
+async function loadTeam(teamId, els) {
+  var today = new Date().toISOString().slice(0, 10);
+  var cache = loadCache(teamId);
+
+  // Show cached past data immediately (instant)
+  if (cache && cache.past && cache.past.length) {
+    var sorted = cache.past.slice().sort(function(a,b) { return b.gd.date.localeCompare(a.gd.date); });
+    els.past.innerHTML = sorted.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('');
+  }
+
+  // Discover new gamedays if cache expired or missing
+  if (needsDiscovery(cache)) {
+    var knownIds = new Set(
+      (cache && cache.past ? cache.past.map(function(p) { return p.id; }) : [])
+      .concat(cache && cache.active_ids ? cache.active_ids : [])
+    );
+
+    els.future.innerHTML = renderProgress(0, 1);
+
+    var newEntries = await discoverNewGamedays(teamId, knownIds, function(done, total) {
+      els.future.innerHTML = renderProgress(done, total);
+    });
+
+    if (!cache) cache = { past: [], active_ids: [] };
+
+    newEntries.forEach(function(e) {
+      var cls = classifyGameday(e.gd, e.games, teamId, today);
+      if (cls === 'past' && !cache.past.some(function(p) { return p.id === e.gd.id; })) {
+        cache.past.push({ id: e.gd.id, gd: e.gd, games: e.games });
+      } else if (cls === 'active' && cache.active_ids.indexOf(e.gd.id) === -1) {
+        cache.active_ids.push(e.gd.id);
+      }
+    });
+
+    cache.next_discovery = new Date(Date.now() + DISCOVERY_TTL_MS).toISOString();
+    cache.scanned_at     = new Date().toISOString();
+  }
+
+  // Always re-fetch active gamedays for current scores/status
+  var activeEntries = (await Promise.all(
+    (cache.active_ids || []).map(async function(id) {
+      try {
+        var results = await Promise.all([fetchGamedayDetail(id), fetchGames(id)]);
+        var gd    = results[0];
+        var games = results[1];
+        gd.league_display = gd.league_display || '';
+        return { id: id, gd: gd, games: games };
+      } catch(e) { return null; }
+    })
+  )).filter(Boolean);
+
+  // Promote completed active gamedays to permanent past cache
+  var newActiveIds = [];
+  activeEntries.forEach(function(e) {
+    var cls = classifyGameday(e.gd, e.games, teamId, today);
+    if (cls === 'past') {
+      if (!cache.past.some(function(p) { return p.id === e.id; }))
+        cache.past.push({ id: e.id, gd: e.gd, games: e.games });
+    } else {
+      newActiveIds.push(e.id);
+    }
+  });
+  cache.active_ids = newActiveIds;
+  saveCache(teamId, cache);
+
+  // Resolve display name from first matching game result
+  var allEntries = cache.past.concat(activeEntries);
+  var abbrev      = resolveTeamAbbrev(teamId, allEntries);
+  els.title.textContent = '🏈 ' + resolveTeamName(abbrev);
+
+  // Live section
+  var liveItems = [];
+  activeEntries.forEach(function(e) {
+    e.games.forEach(function(g) {
+      if (g.status === 'live' && g.results.some(function(r) { return r.team_id === teamId; }))
+        liveItems.push({ game: g, gd: e.gd });
+    });
+  });
+  if (liveItems.length) {
+    els.live.innerHTML = '<div class="section-title">🔴 Live jetzt</div>'
+      + liveItems.map(function(x) { return renderLiveBanner(x.game, x.gd, teamId); }).join('');
+  } else {
+    els.live.innerHTML = '';
+  }
+
+  // Past section
+  var pastSorted = cache.past.slice().sort(function(a,b) { return b.gd.date.localeCompare(a.gd.date); });
+  els.past.innerHTML = pastSorted.length
+    ? pastSorted.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('')
+    : '<div class="no-data">Keine vergangenen Spieltage gefunden.</div>';
+
+  // Future/active section
+  var futureEntries = activeEntries
+    .filter(function(e) { return classifyGameday(e.gd, e.games, teamId, today) === 'active'; })
+    .sort(function(a,b) { return a.gd.date.localeCompare(b.gd.date); });
+  els.future.innerHTML = futureEntries.length
+    ? futureEntries.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, false); }).join('')
+    : '<div class="no-data">Keine kommenden Spieltage geplant.</div>';
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+(async function() {
+  var cfg = parseConfig();
+  document.documentElement.style.setProperty('--accent', '#' + cfg.color);
+
+  if (cfg.teams.length === 0) {
+    document.getElementById('root').innerHTML =
+      '<div class="error-banner">Kein Team konfiguriert. Bitte ?t=&lt;team_id&gt; in der URL angeben.</div>';
+    return;
+  }
+
+  if (cfg.refresh) cfg.teams.forEach(function(id) { clearCache(id); });
+
+  var root   = document.getElementById('root');
+  var elMap  = {};
+
+  cfg.teams.forEach(function(teamId) {
+    var block = document.createElement('div');
+    block.className = 'team-block';
+    block.innerHTML = '<div class="team-title" id="t-title-' + teamId + '">🏈 Team ' + teamId + '</div>'
+      + '<div id="t-live-'   + teamId + '"></div>'
+      + '<div class="section-title">▼ Vergangene Spieltage</div>'
+      + '<div id="t-past-'   + teamId + '"><div class="loading">Lade Daten…</div></div>'
+      + '<div class="section-title">▲ Kommende Spieltage</div>'
+      + '<div id="t-future-' + teamId + '"><div class="loading">Lade Daten…</div></div>';
+    root.appendChild(block);
+    elMap[teamId] = {
+      title:  document.getElementById('t-title-'  + teamId),
+      live:   document.getElementById('t-live-'   + teamId),
+      past:   document.getElementById('t-past-'   + teamId),
+      future: document.getElementById('t-future-' + teamId),
+    };
+  });
+
+  await Promise.all(cfg.teams.map(async function(teamId) {
+    try {
+      await loadTeam(teamId, elMap[teamId]);
+    } catch(err) {
+      console.error('Widget error (team ' + teamId + '):', err);
+      elMap[teamId].future.innerHTML =
+        '<div class="error-banner">Fehler beim Laden: ' + escapeHtml(err.message) + '</div>';
+    }
+  }));
+})();
 </script>
 </body>
 </html>
