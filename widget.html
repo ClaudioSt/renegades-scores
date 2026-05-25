@@ -261,9 +261,14 @@ async function discoverNewGamedays(teamId, knownIds, onProgress) {
   var newGamedays = allGamedays.filter(function(gd) { return !knownIds.has(gd.id); });
   if (newGamedays.length === 0) return [];
 
-  // Snapshot gamedays carry their games — use them without an API call
-  var fromSnapshot = newGamedays.filter(function(gd) { return gd.games; });
-  var needFetch    = newGamedays.filter(function(gd) { return !gd.games; });
+  var today = new Date().toISOString().slice(0, 10);
+  // Snapshot gamedays with games data → use directly; future ones with empty games → re-fetch
+  var fromSnapshot = newGamedays.filter(function(gd) {
+    return gd.games && (gd.games.length > 0 || gd.date < today);
+  });
+  var needFetch = newGamedays.filter(function(gd) {
+    return !gd.games || (gd.games.length === 0 && gd.date >= today);
+  });
 
   var snapshotEntries = fromSnapshot
     .map(function(gd) { return { gd: gd, games: gd.games }; })
