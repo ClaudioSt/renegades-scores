@@ -241,6 +241,104 @@ async function discoverNewGamedays(teamId, knownIds, onProgress) {
       });
     });
 }
+
+// ── RENDER ───────────────────────────────────────────────────────────────────
+function renderProgress(done, total) {
+  var pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  return '<div class="progress-wrap">'
+    + '<div class="progress-bar-bg"><div class="progress-bar-fg" style="width:' + pct + '%"></div></div>'
+    + '<div class="progress-label">Erkenne Spieltage… ' + done + ' / ' + total + '</div>'
+    + '</div>';
+}
+
+function renderLiveBanner(game, gd, teamId) {
+  var home = game.results.find(function(r) { return r.isHome; });
+  var away = game.results.find(function(r) { return !r.isHome; });
+  if (!home || !away) return '';
+  var homeName  = escapeHtml(resolveTeamName(home.team_name));
+  var awayName  = escapeHtml(resolveTeamName(away.team_name));
+  var gdName    = escapeHtml(gd.name);
+  var league    = escapeHtml(gd.league_display || '');
+  var tickerUrl = LIVETICKER_BASE + '?gameday=' + encodeURIComponent(gd.id);
+  return '<div class="live-banner">'
+    + '<span class="live-badge">● LIVE</span>'
+    + '<div class="live-info">' + homeName + ' vs. ' + awayName + '<br><small>' + gdName + ' · ' + league + '</small></div>'
+    + '<div class="live-score">' + game.halftime_score.home + ' : ' + game.halftime_score.away + '</div>'
+    + '<a href="' + tickerUrl + '" target="_blank">🔴 Liveticker</a>'
+    + '</div>';
+}
+
+function renderGameRow(game, teamId, showScore) {
+  var home = game.results.find(function(r) { return r.isHome; });
+  var away = game.results.find(function(r) { return !r.isHome; });
+  if (!home || !away) return '';
+
+  var homeName = escapeHtml(resolveTeamName(home.team_name));
+  var awayName = escapeHtml(resolveTeamName(away.team_name));
+  var homeHL   = home.team_id === teamId ? ' highlight' : '';
+  var awayHL   = away.team_id === teamId ? ' highlight' : '';
+  var stage    = escapeHtml(game.stage || '');
+  var standing = game.standing ? ' · ' + escapeHtml(game.standing) : '';
+  var time     = escapeHtml(game.scheduled.slice(0, 5));
+  var field    = escapeHtml(String(game.field));
+
+  var scoreHTML;
+  if (!showScore) {
+    scoreHTML = '<div class="upcoming-time">' + time + ' Uhr</div>';
+  } else {
+    var cls = getResultClass(teamId, game.results);
+    var hs  = game.halftime_score;
+    var fs  = game.final_score;
+    scoreHTML = '<div class="score ' + cls + '">' + fs.home + ' : ' + fs.away + '</div>'
+      + '<div class="stage-label">HZ: ' + hs.home + ':' + hs.away + '</div>';
+  }
+
+  return '<div class="game-row">'
+    + '<div class="team-home' + homeHL + '">' + homeName + '</div>'
+    + '<div class="score-box">'
+    +   '<div class="time">' + time + ' Uhr · Feld ' + field + '</div>'
+    +   scoreHTML
+    +   '<div class="stage-label">' + stage + standing + '</div>'
+    + '</div>'
+    + '<div class="team-away' + awayHL + '">' + awayName + '</div>'
+    + '</div>';
+}
+
+function renderGamedayCard(gd, games, teamId, showScore) {
+  var teamGames = games.filter(function(g) {
+    return g.results.some(function(r) { return r.team_id === teamId; });
+  });
+  if (teamGames.length === 0) return '';
+
+  var rows   = teamGames.map(function(g) { return renderGameRow(g, teamId, showScore); }).join('');
+  var name   = escapeHtml(gd.name);
+  var date   = escapeHtml(formatDate(gd.date));
+  var start  = escapeHtml(gd.start);
+  var league = escapeHtml(gd.league_display || '');
+  var addrRaw = (gd.address || '').trim();
+  var skipAddr = ['tba','tbd','','adresse folgt'].some(function(s) { return addrRaw.toLowerCase().startsWith(s); });
+  var addr   = skipAddr ? '' : '<span>📍 ' + escapeHtml(addrRaw.split(',')[0]) + '</span>';
+
+  return '<div class="gameday-card">'
+    + '<div class="gameday-header">'
+    +   '<div><div class="gd-name">' + name + '</div>'
+    +   '<div class="gd-meta"><span>📅 ' + date + '</span><span>🕙 ' + start + ' Uhr</span>' + addr + '</div></div>'
+    +   '<div class="gd-league">' + league + '</div>'
+    + '</div>'
+    + rows
+    + '</div>';
+}
+
+function resolveTeamAbbrev(teamId, entries) {
+  for (var i = 0; i < entries.length; i++) {
+    var games = entries[i].games;
+    for (var j = 0; j < games.length; j++) {
+      var r = games[j].results.find(function(r) { return r.team_id === teamId; });
+      if (r) return r.team_name;
+    }
+  }
+  return String(teamId);
+}
 </script>
 </body>
 </html>
