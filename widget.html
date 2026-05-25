@@ -69,13 +69,22 @@
     .game-row .team-away { text-align: left;  font-weight: 600; font-size: 0.95rem; }
     .team-home.highlight, .team-away.highlight { color: var(--accent); }
     .game-row .score-box { text-align: center; min-width: 90px; }
-    .game-detail {
-      padding: 10px 18px 14px; border-top: 1px solid #1c1c1c;
-      display: flex; gap: 40px;
-    }
+    .game-detail { padding: 10px 18px 14px; border-top: 1px solid #1c1c1c; }
+    .detail-halves { display: flex; gap: 40px; margin-bottom: 12px; }
     .game-detail .half { display: flex; flex-direction: column; gap: 3px; }
     .game-detail .half-label { font-size: 0.65rem; color: #555; text-transform: uppercase; letter-spacing: 1px; }
     .game-detail .half-score { font-size: 0.9rem; font-weight: 700; color: #ccc; }
+    .game-log { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 4px; }
+    .game-log th { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: #555; padding: 4px 6px; border-bottom: 1px solid #222; }
+    .game-log th:first-child { text-align: right; }
+    .game-log th:last-child  { text-align: left; }
+    .game-log th:nth-child(2) { text-align: center; min-width: 52px; }
+    .game-log td { padding: 2px 6px; color: #888; vertical-align: middle; }
+    .game-log .log-l { text-align: right; }
+    .game-log .log-s { text-align: center; font-weight: 700; color: #ccc; font-size: 0.82rem; white-space: nowrap; }
+    .game-log .log-r { text-align: left; }
+    .game-log .log-marker td { text-align: center; color: #444; font-style: italic; padding: 5px 0; }
+    .game-log s { color: #555; }
     .score-box .time { font-size: 0.75rem; color: #888; }
     .score-box .score { font-size: 1.2rem; font-weight: 900; color: #fff; }
     .score-box .score.win  { color: #4caf50; }
@@ -92,7 +101,8 @@
     }
     @media (max-width: 600px) {
       .game-row-main { gap: 6px; padding: 12px; }
-      .game-detail { gap: 24px; padding: 8px 12px 12px; }
+      .game-detail { padding: 8px 12px 12px; }
+      .detail-halves { gap: 24px; }
       .game-row .team-home, .game-row .team-away { font-size: 0.8rem; }
       .score-box .score { font-size: 1rem; }
     }
@@ -154,6 +164,26 @@ function getResultClass(teamId, results) {
 
 var _teamNameByAbbrev = {};
 function resolveTeamName(abbrev) { return _teamNameByAbbrev[abbrev] || abbrev; }
+
+function renderGameLogEvents(log, results) {
+  // Determine which of log.l / log.r is home by matching team names in results
+  var leftIsHome = null;
+  results.forEach(function(r) {
+    var full = resolveTeamName(r.team_name);
+    if (full === log.l || r.team_name === log.l) leftIsHome = r.isHome;
+  });
+
+  var rows = log.ev.map(function(ev) {
+    if (ev.b) return '<tr class="log-marker"><td colspan="3">' + escapeHtml(ev.b) + '</td></tr>';
+    var lHtml = ev.l ? (ev.lx ? '<s>' + escapeHtml(ev.l) + '</s>' : escapeHtml(ev.l)) : '';
+    var rHtml = ev.r ? (ev.rx ? '<s>' + escapeHtml(ev.r) + '</s>' : escapeHtml(ev.r)) : '';
+    return '<tr><td class="log-l">' + lHtml + '</td><td class="log-s">' + escapeHtml(ev.s || '') + '</td><td class="log-r">' + rHtml + '</td></tr>';
+  }).join('');
+
+  return '<table class="game-log">'
+    + '<thead><tr><th>' + escapeHtml(log.l) + '</th><th>Stand</th><th>' + escapeHtml(log.r) + '</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody></table>';
+}
 
 var _openDetail = null;
 function _toggleGameDetail(mainEl) {
@@ -374,13 +404,17 @@ function renderGameRow(game, teamId, showScore) {
 
   var detailHTML = '';
   var hs2 = game.halftime_score, fs2 = game.final_score;
-  if (showScore && hs2 && fs2) {
-    var sh_home = fs2.home - hs2.home;
-    var sh_away = fs2.away - hs2.away;
-    detailHTML = '<div class="game-detail" hidden>'
-      + '<div class="half"><div class="half-label">1. Halbzeit</div><div class="half-score">' + hs2.home + ' : ' + hs2.away + '</div></div>'
-      + '<div class="half"><div class="half-label">2. Halbzeit</div><div class="half-score">' + sh_home + ' : ' + sh_away + '</div></div>'
-      + '</div>';
+  if (showScore && (hs2 || game.log)) {
+    var halvesHTML = '';
+    if (hs2 && fs2) {
+      var sh_home = fs2.home - hs2.home, sh_away = fs2.away - hs2.away;
+      halvesHTML = '<div class="detail-halves">'
+        + '<div class="half"><div class="half-label">1. Halbzeit</div><div class="half-score">' + hs2.home + ' : ' + hs2.away + '</div></div>'
+        + '<div class="half"><div class="half-label">2. Halbzeit</div><div class="half-score">' + sh_home + ' : ' + sh_away + '</div></div>'
+        + '</div>';
+    }
+    var logHTML = game.log ? renderGameLogEvents(game.log, game.results) : '';
+    detailHTML = '<div class="game-detail" hidden>' + halvesHTML + logHTML + '</div>';
   }
 
   var rowClass = detailHTML ? ' has-detail' : '';

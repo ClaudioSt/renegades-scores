@@ -1,11 +1,12 @@
 // Fetches all gameday metadata + games and writes snapshot.json
 // Full run:    node _gen_snapshot.js           (~5 min for 734 gamedays, batch 5 + 100ms delay)
-// Rebuild:     node _gen_snapshot.js --rebuild  (re-index teams only, re-uses existing gameday data)
+// Rebuild:     node _gen_snapshot.js --rebuild  (re-index teams + re-fetch game logs for current season)
 
-const API_BASE   = 'https://leaguesphere.app/api';
-const BATCH_SIZE = 5;
+const API_BASE       = 'https://leaguesphere.app/api';
+const BATCH_SIZE     = 5;
 const BATCH_DELAY_MS = 100;  // pause between batches to avoid rate-limiting
-const TODAY      = new Date().toISOString().slice(0, 10);
+const TODAY          = new Date().toISOString().slice(0, 10);
+const LOG_SINCE      = (new Date().getFullYear()) + '-01-01';  // fetch play-by-play for current year
 
 const NAME_MAP = {
   'Nürn': 'Nürnberg Renegades',   'Nürn2': 'Nürnberg Renegades II',
@@ -61,6 +62,40 @@ async function fetchTeamNameMap() {
   return map;
 }
 
+function parseGameLog(html) {
+  // Find the Spielverlauf table: game-log-table class, 3 cols, middle header = "Spielstand"
+  for (const [, body] of html.matchAll(/<table[^>]*game-log-table[^>]*>([\s\S]*?)<\/table>/g)) {
+    const ths = [...body.matchAll(/<th[^>]*>([\s\S]*?)<\/th>/g)];
+    if (ths.length !== 3) continue;
+    const strip = s => s.replace(/<[^>]+>/g, '').trim();
+    if (strip(ths[1][1]) !== 'Spielstand') continue;
+
+    const events = [];
+    for (const [, row] of body.matchAll(/<tr>([\s\S]*?)<\/tr>/g)) {
+      const cells = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/g)];
+      if (cells.length !== 3) continue;
+      const cell = inner => ({
+        text:   strip(inner),
+        strike: /<s>/.test(inner),
+        bold:   /<b>/.test(inner),
+      });
+      const L = cell(cells[0][1]), M = cell(cells[1][1]), R = cell(cells[2][1]);
+      if (!L.text && !M.text && !R.text) continue;
+      const ev = {};
+      if (M.bold && M.text) {
+        ev.b = M.text;
+      } else {
+        if (M.text) ev.s = M.text;
+        if (L.text) { ev.l = L.text; if (L.strike) ev.lx = 1; }
+        if (R.text) { ev.r = R.text; if (R.strike) ev.rx = 1; }
+      }
+      if (Object.keys(ev).length) events.push(ev);
+    }
+    return { l: strip(ths[0][1]), r: strip(ths[2][1]), ev: events };
+  }
+  return null;
+}
+
 async function batchedAll(items, fn, batchSize, delayMs) {
   const results = [];
   for (let i = 0; i < items.length; i += batchSize) {
@@ -87,6 +122,7 @@ function slimGameday(gd) {
 
 function slimGame(g) {
   return {
+    id:             g.id,
     status:         g.status,
     stage:          g.stage           || null,
     standing:       g.standing        || null,
@@ -199,6 +235,38 @@ function buildTeams(withGames, teamNameMap) {
     }
     process.stdout.write('\n');
     console.log('  ' + recovered + ' / ' + emptyGds.length + ' recovered');
+  }
+
+  // Game log pass: fetch play-by-play for current year's gamedays
+  const logGds = withGames.filter(gd => gd.date >= LOG_SINCE);
+  if (logGds.length) {
+    // Ensure games have IDs (old snapshots may lack them — re-fetch game list)
+    for (const gd of logGds.filter(gd => gd.games.length > 0 && !gd.games[0].id)) {
+      try {
+        const fresh = await fetchJSON(API_BASE + '/gamedays/' + gd.id + '/games/?format=json');
+        gd.games = fresh.map(slimGame);
+      } catch(e) {}
+      await new Promise(r => setTimeout(r, 200));
+    }
+    const totalGameLogGames = logGds.reduce((n, gd) => n + gd.games.length, 0);
+    console.log('Fetching game logs (' + totalGameLogGames + ' games in ' + logGds.length + ' gamedays from ' + LOG_SINCE + ')…');
+    let logDone = 0, logGot = 0;
+    for (const gd of logGds) {
+      for (const game of gd.games) {
+        if (game.id && !game.log) {
+          try {
+            const html = await fetchHTML('https://leaguesphere.app/gamedays/gameday/' + gd.id + '/game/' + game.id);
+            const log  = parseGameLog(html);
+            if (log) { game.log = log; logGot++; }
+          } catch(e) {}
+        }
+        logDone++;
+        process.stdout.write('\r  ' + logDone + ' / ' + totalGameLogGames + '  logs: ' + logGot + '  ');
+        if (logDone < totalGameLogGames) await new Promise(r => setTimeout(r, 300));
+      }
+    }
+    process.stdout.write('\n');
+    console.log('  ' + logGot + ' game logs stored');
   }
 
   console.log('Fetching team names…');
