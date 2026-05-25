@@ -11,19 +11,42 @@
     h1 { font-size: 1.4rem; color: #ff4500; margin-bottom: 8px; }
     .subtitle { color: #888; font-size: 0.9rem; margin-bottom: 32px; }
     label { display: block; font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; margin-top: 20px; }
-    input[type=number] {
+
+    .team-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
+    .team-search-wrap { position: relative; flex: 1; }
+    .team-search-input {
       background: #1a1a1a; border: 1px solid #333; color: #f0f0f0;
-      border-radius: 6px; padding: 10px 14px; font-size: 1rem; width: 100%;
+      border-radius: 6px; padding: 10px 14px; font-size: 1rem; width: 100%; outline: none;
     }
+    .team-search-input:focus { border-color: #555; }
+    .team-search-input.selected { border-color: #4caf50; }
+    .team-search-input.err { border-color: #f44336; }
+    .team-dropdown {
+      position: absolute; top: 100%; left: 0; right: 0; z-index: 100;
+      background: #1e1e1e; border: 1px solid #444; border-top: none;
+      border-radius: 0 0 6px 6px; max-height: 220px; overflow-y: auto;
+    }
+    .team-dropdown[hidden] { display: none; }
+    .team-dropdown-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 9px 14px; cursor: pointer; font-size: 0.9rem;
+      border-bottom: 1px solid #2a2a2a;
+    }
+    .team-dropdown-item:last-child { border-bottom: none; }
+    .team-dropdown-item:hover, .team-dropdown-item.focused { background: #2d2d2d; }
+    .item-id { font-size: 0.75rem; color: #555; }
+    .team-status { font-size: 0.9rem; color: #888; padding-top: 12px; }
+    .team-status.ok  { color: #4caf50; }
+    .remove-btn {
+      background: none; border: none; color: #555; font-size: 1.3rem;
+      cursor: pointer; padding: 8px 2px; margin-top: 0; line-height: 1;
+    }
+    .remove-btn:hover { color: #f44336; background: none; }
+
     input[type=color] {
       background: #1a1a1a; border: 1px solid #333; border-radius: 6px;
       height: 44px; padding: 4px; cursor: pointer; width: 100%;
     }
-    .team-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
-    .team-row input { flex: 1; }
-    .team-status { font-size: 0.8rem; color: #888; min-width: 180px; }
-    .team-status.ok  { color: #4caf50; }
-    .team-status.err { color: #f44336; }
     button {
       background: #ff4500; color: #fff; border: none; border-radius: 6px;
       padding: 10px 20px; font-size: 0.9rem; cursor: pointer; font-weight: 700; margin-top: 8px;
@@ -46,20 +69,17 @@
     #preview-frame-wrap { margin-top: 32px; display: none; }
     #preview-frame-wrap h2 { font-size: 1rem; margin-bottom: 12px; color: #ccc; }
     #preview-frame { width: 100%; height: 800px; border: 1px solid #333; border-radius: 6px; }
+    #loading-hint { font-size: 0.8rem; color: #555; margin-top: 6px; }
   </style>
 </head>
 <body>
 <div class="container">
   <h1>Widget Generator</h1>
-  <p class="subtitle">Team-IDs eingeben, Farbe wählen, Embed-Code kopieren.</p>
+  <p class="subtitle">Team suchen, Farbe wählen, Embed-Code kopieren.</p>
 
-  <label>Teams (team_id aus LeagueSphere)</label>
-  <div id="teams-container">
-    <div class="team-row">
-      <input type="number" placeholder="z.B. 159" min="1" class="team-id-input">
-      <span class="team-status">-</span>
-    </div>
-  </div>
+  <label>Teams</label>
+  <div id="teams-container"></div>
+  <p id="loading-hint">Lade Teamliste…</p>
   <button class="secondary" id="add-team-btn" type="button">+ Team hinzufügen</button>
 
   <label>Akzentfarbe</label>
@@ -88,26 +108,21 @@
 </div>
 
 <script>
-var API_BASE = 'https://leaguesphere.app/api';
+var NAME_MAP = {
+  'Nürn': 'Nürnberg Renegades', 'Nürn2': 'Nürnberg Renegades II',
+  'Spatz': 'München Spatzen', 'Würz': 'Würzburg',
+  'Lions': 'Erlangen Lions', 'LLions': 'Landsberg Lions',
+  'Kelk': 'Kelkheim Lizzards', 'Werra': 'Werratal',
+  'Bamb': 'Bamberg', 'Regen': 'Regensburg', 'Regen2': 'Regensburg II',
+  'Ingol': 'Ingolstadt', 'Ingol2': 'Ingolstadt II',
+  'Erlangen2': 'Erlangen 2', 'Ramsenthal': 'Ramsenthal',
+  'Ramsenthal2': 'Ramsenthal II', 'Rodental': 'Rödental', 'Erding2': 'Erding II',
+};
+function resolveTeamName(abbrev) { return NAME_MAP[abbrev] || abbrev; }
 
-document.getElementById('add-team-btn').addEventListener('click', function() {
-  var row = document.createElement('div');
-  row.className = 'team-row';
-  var inp = document.createElement('input');
-  inp.type = 'number';
-  inp.placeholder = 'z.B. 287';
-  inp.min = '1';
-  inp.className = 'team-id-input';
-  var span = document.createElement('span');
-  span.className = 'team-status';
-  span.textContent = '-';
-  row.appendChild(inp);
-  row.appendChild(span);
-  document.getElementById('teams-container').appendChild(row);
-});
-
+// ── SNAPSHOT ──────────────────────────────────────────────────────────────────
 var _snapshotPromise = null;
-async function loadSnapshot() {
+function loadSnapshot() {
   if (!_snapshotPromise) {
     var base = window.location.href.replace(/[^/]*$/, '');
     _snapshotPromise = fetch(base + 'snapshot.json').then(function(r) { return r.json(); });
@@ -115,50 +130,178 @@ async function loadSnapshot() {
   return _snapshotPromise;
 }
 
-async function findTeamAbbrev(teamId) {
-  try {
-    var snap = await loadSnapshot();
-    for (var i = 0; i < snap.gamedays.length; i++) {
-      var games = snap.gamedays[i].games || [];
-      for (var j = 0; j < games.length; j++) {
-        var found = games[j].results.find(function(r) { return r.team_id === teamId; });
-        if (found) return found.team_name;
-      }
-    }
-    return null;
-  } catch(e) { return null; }
+var _teamListPromise = null;
+function getTeamList() {
+  if (_teamListPromise) return _teamListPromise;
+  _teamListPromise = loadSnapshot().then(function(snap) {
+    var seen = {};
+    snap.gamedays.forEach(function(gd) {
+      (gd.games || []).forEach(function(g) {
+        (g.results || []).forEach(function(r) {
+          if (!seen[r.team_id]) seen[r.team_id] = r.team_name;
+        });
+      });
+    });
+    return Object.keys(seen).map(function(id) {
+      var abbrev = seen[id];
+      return { id: Number(id), abbrev: abbrev, name: resolveTeamName(abbrev) };
+    }).sort(function(a, b) { return a.name.localeCompare(b.name, 'de'); });
+  });
+  return _teamListPromise;
 }
 
-document.getElementById('generate-btn').addEventListener('click', async function() {
-  var inputs  = document.querySelectorAll('.team-id-input');
-  var teams   = [];
-  var hasErr  = false;
+// ── SEARCH ROW ────────────────────────────────────────────────────────────────
+function createTeamRow(removable) {
+  var row = document.createElement('div');
+  row.className = 'team-row';
 
-  for (var i = 0; i < inputs.length; i++) {
-    var input    = inputs[i];
-    var id       = parseInt(input.value, 10);
-    var statusEl = input.parentElement.querySelector('.team-status');
+  var wrap = document.createElement('div');
+  wrap.className = 'team-search-wrap';
 
-    if (!id || id <= 0) {
-      statusEl.textContent = 'Ungültige ID';
-      statusEl.className   = 'team-status err';
-      hasErr = true;
-      continue;
-    }
+  var input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'team-search-input';
+  input.placeholder = 'Team suchen…';
+  input.autocomplete = 'off';
+  input.dataset.teamId = '';
 
-    statusEl.textContent = 'Prüfe...';
-    statusEl.className   = 'team-status';
-    var abbrev = await findTeamAbbrev(id);
+  var dropdown = document.createElement('div');
+  dropdown.className = 'team-dropdown';
+  dropdown.hidden = true;
 
-    if (abbrev) {
-      statusEl.textContent = 'Gefunden: ' + abbrev;
-      statusEl.className   = 'team-status ok';
-    } else {
-      statusEl.textContent = 'Nicht in letzten 20 Spieltagen, wird trotzdem hinzugefügt';
-      statusEl.className   = 'team-status';
-    }
-    teams.push(id);
+  var status = document.createElement('span');
+  status.className = 'team-status';
+
+  var focusedIndex = -1;
+  var currentItems = [];
+
+  function renderDropdown(items) {
+    currentItems = items;
+    focusedIndex = -1;
+    while (dropdown.firstChild) dropdown.removeChild(dropdown.firstChild);
+    if (!items.length) { dropdown.hidden = true; return; }
+    items.forEach(function(team) {
+      var item   = document.createElement('div');
+      item.className = 'team-dropdown-item';
+
+      var nameSpan = document.createElement('span');
+      nameSpan.textContent = team.name;  // safe: textContent only
+
+      var idSpan  = document.createElement('span');
+      idSpan.className = 'item-id';
+      idSpan.textContent = '#' + team.id;
+
+      item.appendChild(nameSpan);
+      item.appendChild(idSpan);
+      item.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        selectTeam(team);
+      });
+      dropdown.appendChild(item);
+    });
+    dropdown.hidden = false;
   }
+
+  function updateFocus() {
+    var items = dropdown.querySelectorAll('.team-dropdown-item');
+    items.forEach(function(el, i) { el.classList.toggle('focused', i === focusedIndex); });
+    if (items[focusedIndex]) items[focusedIndex].scrollIntoView({ block: 'nearest' });
+  }
+
+  function selectTeam(team) {
+    input.value = team.name;
+    input.dataset.teamId = String(team.id);
+    input.classList.add('selected');
+    input.classList.remove('err');
+    status.textContent = '✓';
+    status.className = 'team-status ok';
+    dropdown.hidden = true;
+  }
+
+  input.addEventListener('input', function() {
+    input.dataset.teamId = '';
+    input.classList.remove('selected', 'err');
+    status.textContent = '';
+    status.className = 'team-status';
+    var q = input.value.trim().toLowerCase();
+    if (!q) { dropdown.hidden = true; return; }
+    getTeamList().then(function(list) {
+      renderDropdown(list.filter(function(t) {
+        return t.name.toLowerCase().includes(q) || t.abbrev.toLowerCase().includes(q);
+      }).slice(0, 12));
+    });
+  });
+
+  input.addEventListener('keydown', function(e) {
+    var items = dropdown.querySelectorAll('.team-dropdown-item');
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusedIndex = Math.min(focusedIndex + 1, items.length - 1);
+      updateFocus();
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusedIndex = Math.max(focusedIndex - 1, 0);
+      updateFocus();
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      var target = focusedIndex >= 0 ? items[focusedIndex] : (items.length === 1 ? items[0] : null);
+      if (target) target.dispatchEvent(new Event('mousedown'));
+    } else if (e.key === 'Escape') {
+      dropdown.hidden = true;
+    }
+  });
+
+  input.addEventListener('blur', function() {
+    setTimeout(function() { dropdown.hidden = true; }, 150);
+  });
+
+  wrap.appendChild(input);
+  wrap.appendChild(dropdown);
+  row.appendChild(wrap);
+  row.appendChild(status);
+
+  if (removable) {
+    var rmBtn = document.createElement('button');
+    rmBtn.className = 'remove-btn';
+    rmBtn.type = 'button';
+    rmBtn.textContent = '×';
+    rmBtn.title = 'Entfernen';
+    rmBtn.addEventListener('click', function() { row.remove(); });
+    row.appendChild(rmBtn);
+  }
+
+  return row;
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+var container = document.getElementById('teams-container');
+container.appendChild(createTeamRow(false));
+
+getTeamList().then(function() {
+  document.getElementById('loading-hint').style.display = 'none';
+}).catch(function() {
+  document.getElementById('loading-hint').textContent = 'Teamliste konnte nicht geladen werden.';
+});
+
+document.getElementById('add-team-btn').addEventListener('click', function() {
+  container.appendChild(createTeamRow(true));
+});
+
+// ── GENERATE ──────────────────────────────────────────────────────────────────
+document.getElementById('generate-btn').addEventListener('click', function() {
+  var inputs = container.querySelectorAll('.team-search-input');
+  var teams  = [];
+  var hasErr = false;
+
+  inputs.forEach(function(inp) {
+    var id = parseInt(inp.dataset.teamId, 10);
+    if (!id || id <= 0) {
+      inp.classList.add('err');
+      hasErr = true;
+    } else {
+      teams.push(id);
+    }
+  });
 
   if (hasErr || teams.length === 0) return;
 
@@ -172,7 +315,7 @@ document.getElementById('generate-btn').addEventListener('click', async function
   document.getElementById('embed-output').value = embedCode;
   document.getElementById('preview-link').href  = src;
   document.getElementById('output-section').style.display = 'block';
-  document.getElementById('preview-frame').src             = src;
+  document.getElementById('preview-frame').src              = src;
   document.getElementById('preview-frame-wrap').style.display = 'block';
 });
 
