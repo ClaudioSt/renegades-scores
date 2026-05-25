@@ -207,9 +207,11 @@ async function fetchJSON(url) {
   return res.json();
 }
 
+var _allGamedaysPromise = null;
 async function fetchAllGamedays() {
-  var data = await fetchJSON(API_BASE + '/gamedays/?format=json&page_size=1000');
-  return data.results;
+  if (!_allGamedaysPromise)
+    _allGamedaysPromise = fetchJSON(API_BASE + '/gamedays/?format=json&page_size=1000').then(function(d) { return d.results; });
+  return _allGamedaysPromise;
 }
 
 async function fetchGames(gamedayId) {
