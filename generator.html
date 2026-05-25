@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Widget Generator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0d0d0d; color: #f0f0f0; padding: 40px 20px; }
+    .container { max-width: 600px; margin: 0 auto; }
+    h1 { font-size: 1.4rem; color: #ff4500; margin-bottom: 8px; }
+    .subtitle { color: #888; font-size: 0.9rem; margin-bottom: 32px; }
+    label { display: block; font-size: 0.8rem; color: #888; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; margin-top: 20px; }
+    input[type=number] {
+      background: #1a1a1a; border: 1px solid #333; color: #f0f0f0;
+      border-radius: 6px; padding: 10px 14px; font-size: 1rem; width: 100%;
+    }
+    input[type=color] {
+      background: #1a1a1a; border: 1px solid #333; border-radius: 6px;
+      height: 44px; padding: 4px; cursor: pointer; width: 100%;
+    }
+    .team-row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+    .team-row input { flex: 1; }
+    .team-status { font-size: 0.8rem; color: #888; min-width: 180px; }
+    .team-status.ok  { color: #4caf50; }
+    .team-status.err { color: #f44336; }
+    button {
+      background: #ff4500; color: #fff; border: none; border-radius: 6px;
+      padding: 10px 20px; font-size: 0.9rem; cursor: pointer; font-weight: 700; margin-top: 8px;
+    }
+    button:hover { background: #e03d00; }
+    button.secondary { background: #222; border: 1px solid #333; color: #f0f0f0; }
+    button.secondary:hover { background: #2a2a2a; }
+    #output-section { margin-top: 32px; display: none; }
+    #output-section h2 { font-size: 1rem; margin-bottom: 12px; color: #ccc; }
+    textarea {
+      width: 100%; background: #1a1a1a; border: 1px solid #333; color: #4caf50;
+      border-radius: 6px; padding: 14px; font-family: monospace;
+      font-size: 0.85rem; resize: vertical; min-height: 100px;
+    }
+    .copy-row { display: flex; gap: 10px; margin-top: 10px; align-items: center; }
+    .copy-confirm { font-size: 0.8rem; color: #4caf50; opacity: 0; transition: opacity 0.3s; }
+    .copy-confirm.show { opacity: 1; }
+    .preview-link { margin-top: 12px; }
+    .preview-link a { color: #ff4500; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Widget Generator</h1>
+  <p class="subtitle">Team-IDs eingeben, Farbe wählen, Embed-Code kopieren.</p>
+
+  <label>Teams (team_id aus LeagueSphere)</label>
+  <div id="teams-container">
+    <div class="team-row">
+      <input type="number" placeholder="z.B. 159" min="1" class="team-id-input">
+      <span class="team-status">-</span>
+    </div>
+  </div>
+  <button class="secondary" id="add-team-btn" type="button">+ Team hinzufügen</button>
+
+  <label>Akzentfarbe</label>
+  <input type="color" id="color-input" value="#ff4500">
+
+  <div style="margin-top:24px">
+    <button id="generate-btn" type="button">Embed-Code generieren</button>
+  </div>
+
+  <div id="output-section">
+    <h2>Embed-Code</h2>
+    <textarea id="embed-output" readonly></textarea>
+    <div class="copy-row">
+      <button class="secondary" id="copy-btn" type="button">Kopieren</button>
+      <span class="copy-confirm" id="copy-confirm">Kopiert!</span>
+    </div>
+    <div class="preview-link">
+      <a id="preview-link" href="#" target="_blank">Vorschau öffnen</a>
+    </div>
+  </div>
+</div>
+
+<script>
+var API_BASE = 'https://leaguesphere.app/api';
+
+document.getElementById('add-team-btn').addEventListener('click', function() {
+  var row = document.createElement('div');
+  row.className = 'team-row';
+  var inp = document.createElement('input');
+  inp.type = 'number';
+  inp.placeholder = 'z.B. 287';
+  inp.min = '1';
+  inp.className = 'team-id-input';
+  var span = document.createElement('span');
+  span.className = 'team-status';
+  span.textContent = '-';
+  row.appendChild(inp);
+  row.appendChild(span);
+  document.getElementById('teams-container').appendChild(row);
+});
+
+async function findTeamAbbrev(teamId) {
+  try {
+    var data  = await fetch(API_BASE + '/gamedays/?format=json&page_size=20').then(function(r) { return r.json(); });
+    for (var i = 0; i < data.results.length; i++) {
+      var games = await fetch(API_BASE + '/gamedays/' + data.results[i].id + '/games/?format=json').then(function(r) { return r.json(); });
+      for (var j = 0; j < games.length; j++) {
+        var found = games[j].results.find(function(r) { return r.team_id === teamId; });
+        if (found) return found.team_name;
+      }
+    }
+    return null;
+  } catch(e) { return null; }
+}
+
+document.getElementById('generate-btn').addEventListener('click', async function() {
+  var inputs  = document.querySelectorAll('.team-id-input');
+  var teams   = [];
+  var hasErr  = false;
+
+  for (var i = 0; i < inputs.length; i++) {
+    var input    = inputs[i];
+    var id       = parseInt(input.value, 10);
+    var statusEl = input.parentElement.querySelector('.team-status');
+
+    if (!id || id <= 0) {
+      statusEl.textContent = 'Ungültige ID';
+      statusEl.className   = 'team-status err';
+      hasErr = true;
+      continue;
+    }
+
+    statusEl.textContent = 'Prüfe...';
+    statusEl.className   = 'team-status';
+    var abbrev = await findTeamAbbrev(id);
+
+    if (abbrev) {
+      statusEl.textContent = 'Gefunden: ' + abbrev;
+      statusEl.className   = 'team-status ok';
+    } else {
+      statusEl.textContent = 'Nicht in letzten 20 Spieltagen, wird trotzdem hinzugefügt';
+      statusEl.className   = 'team-status';
+    }
+    teams.push(id);
+  }
+
+  if (hasErr || teams.length === 0) return;
+
+  var color  = document.getElementById('color-input').value.replace('#', '');
+  var base   = window.location.href.replace('generator.html', 'widget.html');
+  var params = teams.map(function(t) { return 't=' + t; }).join('&') + '&color=' + color;
+  var src    = base + '?' + params;
+
+  var embedCode = '<iframe\n  src="' + src + '"\n  width="100%"\n  height="800"\n  frameborder="0"\n  style="border:none;"\n></iframe>';
+
+  document.getElementById('embed-output').value = embedCode;
+  document.getElementById('preview-link').href  = src;
+  document.getElementById('output-section').style.display = 'block';
+});
+
+document.getElementById('copy-btn').addEventListener('click', function() {
+  navigator.clipboard.writeText(document.getElementById('embed-output').value).catch(function() {
+    document.getElementById('embed-output').select();
+    document.execCommand('copy');
+  });
+  var confirm = document.getElementById('copy-confirm');
+  confirm.classList.add('show');
+  setTimeout(function() { confirm.classList.remove('show'); }, 2000);
+});
+</script>
+</body>
+</html>
