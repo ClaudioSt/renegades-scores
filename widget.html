@@ -216,7 +216,7 @@ var _newGamedaysPromise = null;
 async function fetchNewGamedays() {
   if (!_newGamedaysPromise) {
     _newGamedaysPromise = loadSnapshot().then(function(snap) {
-      var maxId = snap.gamedays[0].id;
+      var maxId = Math.max.apply(null, snap.gamedays.map(function(gd) { return gd.id; }));
       return fetchJSON(API_BASE + '/gamedays/?format=json&page_size=100').then(function(d) {
         return d.results
           .filter(function(gd) { return gd.id > maxId; })
