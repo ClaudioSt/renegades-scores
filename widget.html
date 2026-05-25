@@ -199,6 +199,48 @@ function classifyGameday(gd, games, teamId, today) {
   if (gd.date <= t && allDone) return 'past';
   return 'active';
 }
+
+// ── API ──────────────────────────────────────────────────────────────────────
+async function fetchJSON(url) {
+  var res = await fetch(url);
+  if (!res.ok) throw new Error('HTTP ' + res.status + ' - ' + url);
+  return res.json();
+}
+
+async function fetchAllGamedays() {
+  var data = await fetchJSON(API_BASE + '/gamedays/?format=json&page_size=1000');
+  return data.results;
+}
+
+async function fetchGames(gamedayId) {
+  return fetchJSON(API_BASE + '/gamedays/' + gamedayId + '/games/?format=json');
+}
+
+async function fetchGamedayDetail(gamedayId) {
+  return fetchJSON(API_BASE + '/gamedays/' + gamedayId + '/?format=json');
+}
+
+// ── DISCOVERY ────────────────────────────────────────────────────────────────
+async function discoverNewGamedays(teamId, knownIds, onProgress) {
+  var allGamedays = await fetchAllGamedays();
+  var newGamedays = allGamedays.filter(function(gd) { return !knownIds.has(gd.id); });
+  if (newGamedays.length === 0) return [];
+
+  var entries = await batchedAll(newGamedays, async function(gd) {
+    try {
+      var games = await fetchGames(gd.id);
+      return { gd: gd, games: games };
+    } catch(e) { return null; }
+  }, BATCH_SIZE, onProgress);
+
+  return entries
+    .filter(function(e) { return e !== null; })
+    .filter(function(e) {
+      return e.games.some(function(g) {
+        return g.results.some(function(r) { return r.team_id === teamId; });
+      });
+    });
+}
 </script>
 </body>
 </html>
