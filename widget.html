@@ -56,16 +56,26 @@
       background: #333; color: #ccc; padding: 2px 8px;
       border-radius: 4px; font-size: 0.7rem; font-weight: 600;
     }
-    .game-row {
+    .game-row { border-bottom: 1px solid #222; }
+    .game-row:last-child { border-bottom: none; }
+    .game-row-main {
       padding: 14px 18px; display: grid;
       grid-template-columns: 1fr auto 1fr; align-items: center;
-      gap: 12px; border-bottom: 1px solid #222;
+      gap: 12px;
     }
-    .game-row:last-child { border-bottom: none; }
+    .game-row.has-detail .game-row-main { cursor: pointer; }
+    .game-row.has-detail .game-row-main:hover { background: rgba(255,255,255,0.04); border-radius: 4px; }
     .game-row .team-home { text-align: right; font-weight: 600; font-size: 0.95rem; }
     .game-row .team-away { text-align: left;  font-weight: 600; font-size: 0.95rem; }
     .team-home.highlight, .team-away.highlight { color: var(--accent); }
     .game-row .score-box { text-align: center; min-width: 90px; }
+    .game-detail {
+      padding: 10px 18px 14px; border-top: 1px solid #1c1c1c;
+      display: flex; gap: 40px;
+    }
+    .game-detail .half { display: flex; flex-direction: column; gap: 3px; }
+    .game-detail .half-label { font-size: 0.65rem; color: #555; text-transform: uppercase; letter-spacing: 1px; }
+    .game-detail .half-score { font-size: 0.9rem; font-weight: 700; color: #ccc; }
     .score-box .time { font-size: 0.75rem; color: #888; }
     .score-box .score { font-size: 1.2rem; font-weight: 900; color: #fff; }
     .score-box .score.win  { color: #4caf50; }
@@ -81,7 +91,8 @@
       color: #f44336; font-size: 0.85rem; margin-bottom: 12px;
     }
     @media (max-width: 600px) {
-      .game-row { gap: 6px; padding: 12px; }
+      .game-row-main { gap: 6px; padding: 12px; }
+      .game-detail { gap: 24px; padding: 8px 12px 12px; }
       .game-row .team-home, .game-row .team-away { font-size: 0.8rem; }
       .score-box .score { font-size: 1rem; }
     }
@@ -143,6 +154,15 @@ function getResultClass(teamId, results) {
 
 var _teamNameByAbbrev = {};
 function resolveTeamName(abbrev) { return _teamNameByAbbrev[abbrev] || abbrev; }
+
+var _openDetail = null;
+function _toggleGameDetail(mainEl) {
+  var detail = mainEl.parentElement.querySelector('.game-detail');
+  if (!detail) return;
+  var isOpen = _openDetail === detail;
+  if (_openDetail) { _openDetail.hidden = true; _openDetail = null; }
+  if (!isOpen) { detail.hidden = false; _openDetail = detail; }
+}
 
 // ── CACHE ────────────────────────────────────────────────────────────────────
 function cacheKey(teamId) { return 'lsw_' + teamId; }
@@ -348,20 +368,34 @@ function renderGameRow(game, teamId, showScore) {
     if (!fs) {
       scoreHTML = '<div class="score">(kein Ergebnis)</div>';
     } else {
-      var hzStr = (hs && hs.home != null) ? hs.home + ':' + hs.away : '?:?';
-      scoreHTML = '<div class="score ' + cls + '">' + fs.home + ' : ' + fs.away + '</div>'
-        + '<div class="stage-label">HZ: ' + hzStr + '</div>';
+      scoreHTML = '<div class="score ' + cls + '">' + fs.home + ' : ' + fs.away + '</div>';
     }
   }
 
-  return '<div class="game-row">'
-    + '<div class="team-home' + homeHL + '">' + homeName + '</div>'
-    + '<div class="score-box">'
-    +   '<div class="time">' + time + ' Uhr · Feld ' + field + '</div>'
-    +   scoreHTML
-    +   '<div class="stage-label">' + stage + standing + '</div>'
+  var detailHTML = '';
+  var hs2 = game.halftime_score, fs2 = game.final_score;
+  if (showScore && hs2 && fs2) {
+    var sh_home = fs2.home - hs2.home;
+    var sh_away = fs2.away - hs2.away;
+    detailHTML = '<div class="game-detail" hidden>'
+      + '<div class="half"><div class="half-label">1. Halbzeit</div><div class="half-score">' + hs2.home + ' : ' + hs2.away + '</div></div>'
+      + '<div class="half"><div class="half-label">2. Halbzeit</div><div class="half-score">' + sh_home + ' : ' + sh_away + '</div></div>'
+      + '</div>';
+  }
+
+  var rowClass = detailHTML ? ' has-detail' : '';
+  var clickAttr = detailHTML ? ' onclick="_toggleGameDetail(this)"' : '';
+  return '<div class="game-row' + rowClass + '">'
+    + '<div class="game-row-main"' + clickAttr + '>'
+    +   '<div class="team-home' + homeHL + '">' + homeName + '</div>'
+    +   '<div class="score-box">'
+    +     '<div class="time">' + time + ' Uhr · Feld ' + field + '</div>'
+    +     scoreHTML
+    +     '<div class="stage-label">' + stage + standing + '</div>'
+    +   '</div>'
+    +   '<div class="team-away' + awayHL + '">' + awayName + '</div>'
     + '</div>'
-    + '<div class="team-away' + awayHL + '">' + awayName + '</div>'
+    + detailHTML
     + '</div>';
 }
 
