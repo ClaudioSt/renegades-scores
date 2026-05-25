@@ -90,7 +90,115 @@
 <body>
 <div class="widget-wrapper" id="root"></div>
 <script>
-// JS added in Tasks 8-12
+// ── CONSTANTS ────────────────────────────────────────────────────────────────
+var API_BASE          = 'https://leaguesphere.app/api';
+var LIVETICKER_BASE   = 'https://leaguesphere.app/liveticker/';
+var BATCH_SIZE        = 50;
+var DISCOVERY_TTL_MS  = 7 * 24 * 60 * 60 * 1000;
+var CACHE_VERSION     = 1;
+
+// ── URL PARAMS ───────────────────────────────────────────────────────────────
+function parseConfigFromSearch(search) {
+  var params  = new URLSearchParams(search);
+  var teams   = params.getAll('t').map(Number).filter(function(n) { return Number.isInteger(n) && n > 0; });
+  var color   = (params.get('color') || 'ff4500').replace(/^#/, '');
+  var refresh = params.has('refresh');
+  return { teams: teams, color: color, refresh: refresh };
+}
+function parseConfig() { return parseConfigFromSearch(window.location.search); }
+
+// ── SECURITY ─────────────────────────────────────────────────────────────────
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ── UTILS ────────────────────────────────────────────────────────────────────
+function formatDate(dateStr) {
+  var d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('de-DE', { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' });
+}
+
+function getResultClass(teamId, results) {
+  var me    = results.find(function(r) { return r.team_id === teamId; });
+  var other = results.find(function(r) { return r.team_id !== teamId; });
+  if (!me || !other || me.pa == null || other.pa == null) return '';
+  if (me.pa > other.pa) return 'win';
+  if (me.pa < other.pa) return 'loss';
+  return 'draw';
+}
+
+var NAME_MAP = {
+  'Nürn': 'Nürnberg Renegades', 'Nürn2': 'Nürnberg Renegades II',
+  'Spatz': 'München Spatzen', 'Würz': 'Würzburg',
+  'Lions': 'Erlangen Lions', 'LLions': 'Landsberg Lions',
+  'Kelk': 'Kelkheim Lizzards', 'Werra': 'Werratal',
+  'Bamb': 'Bamberg', 'Regen': 'Regensburg', 'Regen2': 'Regensburg II',
+  'Ingol': 'Ingolstadt', 'Ingol2': 'Ingolstadt II',
+  'Erlangen2': 'Erlangen 2', 'Ramsenthal': 'Ramsenthal',
+  'Ramsenthal2': 'Ramsenthal II', 'Rodental': 'Rödental', 'Erding2': 'Erding II',
+};
+function resolveTeamName(abbrev) { return NAME_MAP[abbrev] || abbrev; }
+
+// ── CACHE ────────────────────────────────────────────────────────────────────
+function cacheKey(teamId) { return 'lsw_' + teamId; }
+
+function loadCache(teamId, storage) {
+  var store = storage || localStorage;
+  try {
+    var raw = store.getItem(cacheKey(teamId));
+    if (!raw) return null;
+    var cache = JSON.parse(raw);
+    if (cache.version !== CACHE_VERSION) return null;
+    return cache;
+  } catch(e) { return null; }
+}
+
+function saveCache(teamId, data, storage) {
+  var store = storage || localStorage;
+  try {
+    store.setItem(cacheKey(teamId), JSON.stringify(Object.assign({}, data, { version: CACHE_VERSION })));
+    return true;
+  } catch(e) { return false; }
+}
+
+function clearCache(teamId, storage) {
+  var store = storage || localStorage;
+  try { store.removeItem(cacheKey(teamId)); } catch(e) {}
+}
+
+function needsDiscovery(cache) {
+  if (!cache || !cache.next_discovery) return true;
+  return new Date(cache.next_discovery) <= new Date();
+}
+
+// ── CONCURRENCY ──────────────────────────────────────────────────────────────
+async function batchedAll(items, asyncFn, batchSize, onBatchDone) {
+  var results = [];
+  for (var i = 0; i < items.length; i += batchSize) {
+    var batch       = items.slice(i, i + batchSize);
+    var batchResult = await Promise.all(batch.map(asyncFn));
+    results.push.apply(results, batchResult);
+    if (onBatchDone) onBatchDone(results.length, items.length);
+  }
+  return results;
+}
+
+// ── CLASSIFICATION ───────────────────────────────────────────────────────────
+function classifyGameday(gd, games, teamId, today) {
+  var t = today || new Date().toISOString().slice(0, 10);
+  var teamGames = games.filter(function(g) {
+    return g.results.some(function(r) { return r.team_id === teamId; });
+  });
+  if (teamGames.length === 0) return null;
+  var allDone = teamGames.every(function(g) { return g.status === 'beendet'; });
+  if (gd.date <= t && allDone) return 'past';
+  return 'active';
+}
 </script>
 </body>
 </html>
