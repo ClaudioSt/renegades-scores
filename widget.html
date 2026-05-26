@@ -657,7 +657,7 @@ async function loadTeam(teamId, els, cfg) {
 
 function reportHeight() {
   window.parent.postMessage(
-    { type: 'iframeHeight', height: document.documentElement.scrollHeight },
+    { type: 'iframeHeight', height: document.body.getBoundingClientRect().height },
     '*'
   );
 }
