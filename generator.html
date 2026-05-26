@@ -134,7 +134,7 @@
 
   <div id="preview-frame-wrap">
     <h2>Vorschau</h2>
-    <iframe id="preview-frame" frameborder="0"></iframe>
+    <iframe id="preview-frame" frameborder="0" allowtransparency="true"></iframe>
   </div>
 </div>
 
@@ -350,7 +350,8 @@ document.getElementById('generate-btn').addEventListener('click', function() {
     + '\n  width="100%"'
     + '\n  height="400"'
     + '\n  frameborder="0"'
-    + '\n  style="border:none;overflow:hidden"'
+    + '\n  allowtransparency="true"'
+    + '\n  style="border:none;overflow:hidden;background:transparent"'
     + '\n></iframe>'
     + '\n<script>'
     + '\nwindow.addEventListener(\'message\',function(e){'

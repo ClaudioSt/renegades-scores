@@ -7,7 +7,7 @@
   <style>
     :root { --accent: #ff4500; }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0d0d0d; color: #f0f0f0; padding: 20px; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; background: transparent; color: #f0f0f0; padding: 20px; }
     .widget-wrapper { max-width: 900px; margin: 0 auto; }
     .team-block { margin-bottom: 48px; }
     .team-title {
@@ -15,6 +15,7 @@
       text-transform: uppercase; letter-spacing: 2px;
       margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--accent);
     }
+    .team-title:empty { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
     .section-title {
       font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: 3px; color: #888; margin: 24px 0 12px 0;
@@ -488,6 +489,9 @@ function resolveTeamAbbrev(teamId, entries) {
 // ── LOAD TEAM ────────────────────────────────────────────────────────────────
 async function loadTeam(teamId, els, cfg) {
   var today = new Date().toISOString().slice(0, 10);
+  var snap  = await loadSnapshot();
+  var snapTeam = snap.teams.find(function(t) { return t.id === teamId; });
+  if (els.title && snapTeam) els.title.textContent = snapTeam.name;
   var cache = loadCache(teamId);
 
   // Show cached past data immediately (instant)
@@ -622,7 +626,7 @@ async function loadTeam(teamId, els, cfg) {
     var block = document.createElement('div');
     block.className = 'team-block';
     block.innerHTML =
-      (cfg.showTitle ? '<div class="team-title" id="t-title-' + teamId + '">Team ' + teamId + '</div>' : '')
+      (cfg.showTitle ? '<div class="team-title" id="t-title-' + teamId + '"></div>' : '')
       + '<div id="t-live-' + teamId + '"></div>'
       + (cfg.showPast
           ? '<div class="section-title">Vergangene Spieltage</div>'
