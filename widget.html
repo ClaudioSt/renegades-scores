@@ -112,8 +112,8 @@
       text-transform: uppercase; letter-spacing: 2px; padding: 10px 0; list-style: none;
     }
     .more-gamedays summary::-webkit-details-marker { display: none; }
-    .more-gamedays summary::before { content: '▶  '; }
-    .more-gamedays[open] summary::before { content: '▼  '; }
+    .more-gamedays summary::before { content: ''; }
+    .more-gamedays[open] summary::before { content: ''; }
   </style>
 </head>
 <body>
@@ -451,7 +451,7 @@ function renderGamedayCard(gd, games, teamId, showScore) {
   return '<div class="gameday-card">'
     + '<div class="gameday-header">'
     +   '<div><div class="gd-name">' + name + '</div>'
-    +   '<div class="gd-meta"><span>📅 ' + date + '</span><span>🕙 ' + start + ' Uhr</span>' + addr + '</div></div>'
+    +   '<div class="gd-meta"><span>' + date + '</span><span>' + start + ' Uhr</span>' + addr + '</div></div>'
     +   '<div class="gd-league">' + league + '</div>'
     + '</div>'
     + rows
@@ -538,7 +538,7 @@ async function loadTeam(teamId, els) {
   // Resolve display name from first matching game result
   var allEntries = cache.past.concat(activeEntries);
   var abbrev      = resolveTeamAbbrev(teamId, allEntries);
-  els.title.textContent = '🏈 ' + resolveTeamName(abbrev);
+  els.title.textContent = resolveTeamName(abbrev);
 
   // Live section
   var liveItems = [];
@@ -599,11 +599,11 @@ async function loadTeam(teamId, els) {
   cfg.teams.forEach(function(teamId) {
     var block = document.createElement('div');
     block.className = 'team-block';
-    block.innerHTML = '<div class="team-title" id="t-title-' + teamId + '">🏈 Team ' + teamId + '</div>'
+    block.innerHTML = '<div class="team-title" id="t-title-' + teamId + '">Team ' + teamId + '</div>'
       + '<div id="t-live-'   + teamId + '"></div>'
-      + '<div class="section-title">▼ Vergangene Spieltage</div>'
+      + '<div class="section-title">Vergangene Spieltage</div>'
       + '<div id="t-past-'   + teamId + '"><div class="loading">Lade Daten…</div></div>'
-      + '<div class="section-title">▲ Kommende Spieltage</div>'
+      + '<div class="section-title">Kommende Spieltage</div>'
       + '<div id="t-future-' + teamId + '"><div class="loading">Lade Daten…</div></div>';
     root.appendChild(block);
     elMap[teamId] = {
