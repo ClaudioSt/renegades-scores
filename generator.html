@@ -343,7 +343,20 @@ document.getElementById('generate-btn').addEventListener('click', function() {
   if (compact)           params += '&compact=1';
   var src    = base + '?' + params;
 
-  var embedCode = '<iframe\n  src="' + src + '"\n  width="100%"\n  height="800"\n  frameborder="0"\n  style="border:none;"\n></iframe>';
+  var widgetId  = 'scores-widget-' + teams.join('-');
+  var embedCode = '<iframe'
+    + '\n  id="'        + widgetId + '"'
+    + '\n  src="'       + src + '"'
+    + '\n  width="100%"'
+    + '\n  height="400"'
+    + '\n  frameborder="0"'
+    + '\n  style="border:none;overflow:hidden"'
+    + '\n></iframe>'
+    + '\n<script>'
+    + '\nwindow.addEventListener(\'message\',function(e){'
+    + 'if(e.data&&e.data.type===\'iframeHeight\'){'
+    + 'var f=document.getElementById(\'' + widgetId + '\');'
+    + 'if(f)f.height=e.data.height;}});</s' + 'cript>';
 
   document.getElementById('embed-output').value = embedCode;
   document.getElementById('preview-link').href  = src;
