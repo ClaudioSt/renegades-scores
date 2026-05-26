@@ -486,6 +486,35 @@ function resolveTeamAbbrev(teamId, entries) {
   return String(teamId);
 }
 
+// ── SNAPSHOT QUICK-RENDER ───────────────────────────────────────────────────
+function quickRenderFromSnap(snap, teamId, els, cfg, today) {
+  var forTeam = snap.gamedays.filter(function(gd) {
+    return gd.games && gd.games.some(function(g) {
+      return g.results.some(function(r) { return r.team_id === teamId; });
+    });
+  });
+  var past = forTeam
+    .filter(function(gd) { return classifyGameday(gd, gd.games, teamId, today) === 'past'; })
+    .sort(function(a, b) { return b.date.localeCompare(a.date); });
+  var active = forTeam
+    .filter(function(gd) { return classifyGameday(gd, gd.games, teamId, today) === 'active'; })
+    .sort(function(a, b) { return a.date.localeCompare(b.date); });
+
+  if (els.past && past.length) {
+    var pv = past.slice(0, cfg.past);
+    var ph = past.slice(cfg.past);
+    var snapHtml = pv.map(function(gd) { return renderGamedayCard(gd, gd.games, teamId, true); }).join('');
+    if (ph.length) {
+      snapHtml += '<details class="more-gamedays"><summary>' + ph.length + ' ältere Spieltage</summary>'
+        + ph.map(function(gd) { return renderGamedayCard(gd, gd.games, teamId, true); }).join('') + '</details>';
+    }
+    els.past.innerHTML = snapHtml;
+  }
+  if (els.future && active.length) {
+    var sf = cfg.future > 0 ? active.slice(0, cfg.future) : active;
+    els.future.innerHTML = sf.map(function(gd) { return renderGamedayCard(gd, gd.games, teamId, false); }).join('');
+  }
+}
 // ── LOAD TEAM ────────────────────────────────────────────────────────────────
 async function loadTeam(teamId, els, cfg) {
   var today = new Date().toISOString().slice(0, 10);
@@ -494,20 +523,24 @@ async function loadTeam(teamId, els, cfg) {
   if (els.title && snapTeam) els.title.textContent = snapTeam.name;
   var cache = loadCache(teamId);
 
-  // Show cached past data immediately (instant)
-  if (els.past && cache && cache.past && cache.past.length) {
-    var sorted = cache.past.slice().sort(function(a,b) { return b.gd.date.localeCompare(a.gd.date); });
-    els.past.innerHTML = sorted.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('');
+  // Phase 1: Instant render — cache for returning users, snapshot for first-time users
+  if (cache && cache.past && cache.past.length) {
+    if (els.past) {
+      var sorted = cache.past.slice().sort(function(a,b) { return b.gd.date.localeCompare(a.gd.date); });
+      els.past.innerHTML = sorted.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('');
+    }
+  } else {
+    quickRenderFromSnap(snap, teamId, els, cfg, today);
   }
 
-  // Discover new gamedays if cache expired or missing
+  // Phase 2: Discover new gamedays (updates display when done)
   if (needsDiscovery(cache)) {
     var knownIds = new Set(
       (cache && cache.past ? cache.past.map(function(p) { return p.id; }) : [])
       .concat(cache && cache.active_ids ? cache.active_ids : [])
     );
 
-    if (els.future) els.future.innerHTML = renderProgress(0, 1);
+    if (els.future && !els.future.firstChild) els.future.innerHTML = renderProgress(0, 1);
 
     var newEntries = await discoverNewGamedays(teamId, knownIds, function(done, total) {
       if (els.future) els.future.innerHTML = renderProgress(done, total);
