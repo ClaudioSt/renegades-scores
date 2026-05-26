@@ -652,7 +652,20 @@ async function loadTeam(teamId, els, cfg) {
         elMap[teamId].past.innerHTML = errBanner;
     }
   }));
+
 })();
+
+function reportHeight() {
+  window.parent.postMessage(
+    { type: 'iframeHeight', height: document.documentElement.scrollHeight },
+    '*'
+  );
+}
+var _reportHeightTimer;
+new ResizeObserver(function() {
+  clearTimeout(_reportHeightTimer);
+  _reportHeightTimer = setTimeout(reportHeight, 50);
+}).observe(document.body);
 </script>
 </body>
 </html>
