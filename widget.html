@@ -114,6 +114,13 @@
     .more-gamedays summary::-webkit-details-marker { display: none; }
     .more-gamedays summary::before { content: ''; }
     .more-gamedays[open] summary::before { content: ''; }
+    body.compact { padding: 12px; }
+    body.compact .team-block { margin-bottom: 28px; }
+    body.compact .gameday-card { margin-bottom: 10px; }
+    body.compact .gameday-header { padding: 8px 14px; }
+    body.compact .game-row-main { padding: 10px 14px; }
+    body.compact .game-row .team-home, body.compact .game-row .team-away { font-size: 0.85rem; }
+    body.compact .score-box .score { font-size: 1rem; }
   </style>
 </head>
 <body>
@@ -129,11 +136,18 @@ var CACHE_VERSION     = 3;
 
 // ── URL PARAMS ───────────────────────────────────────────────────────────────
 function parseConfigFromSearch(search) {
-  var params  = new URLSearchParams(search);
-  var teams   = params.getAll('t').map(Number).filter(function(n) { return Number.isInteger(n) && n > 0; });
-  var color   = (params.get('color') || 'ff4500').replace(/^#/, '');
-  var refresh = params.has('refresh');
-  return { teams: teams, color: color, refresh: refresh };
+  var params      = new URLSearchParams(search);
+  var teams       = params.getAll('t').map(Number).filter(function(n) { return Number.isInteger(n) && n > 0; });
+  var color       = (params.get('color') || 'ff4500').replace(/^#/, '');
+  var refresh     = params.has('refresh');
+  var past        = Math.max(1, parseInt(params.get('past'),   10) || 3);
+  var future      = Math.max(0, parseInt(params.get('future'), 10) || 0);  // 0 = all
+  var showPast    = params.get('show_past')   !== '0';
+  var showFuture  = params.get('show_future') !== '0';
+  var showTitle   = params.get('title')       !== '0';
+  var compact     = params.get('compact')     === '1';
+  return { teams: teams, color: color, refresh: refresh, past: past, future: future,
+           showPast: showPast, showFuture: showFuture, showTitle: showTitle, compact: compact };
 }
 function parseConfig() { return parseConfigFromSearch(window.location.search); }
 
@@ -472,12 +486,12 @@ function resolveTeamAbbrev(teamId, entries) {
 }
 
 // ── LOAD TEAM ────────────────────────────────────────────────────────────────
-async function loadTeam(teamId, els) {
+async function loadTeam(teamId, els, cfg) {
   var today = new Date().toISOString().slice(0, 10);
   var cache = loadCache(teamId);
 
   // Show cached past data immediately (instant)
-  if (cache && cache.past && cache.past.length) {
+  if (els.past && cache && cache.past && cache.past.length) {
     var sorted = cache.past.slice().sort(function(a,b) { return b.gd.date.localeCompare(a.gd.date); });
     els.past.innerHTML = sorted.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('');
   }
@@ -489,10 +503,10 @@ async function loadTeam(teamId, els) {
       .concat(cache && cache.active_ids ? cache.active_ids : [])
     );
 
-    els.future.innerHTML = renderProgress(0, 1);
+    if (els.future) els.future.innerHTML = renderProgress(0, 1);
 
     var newEntries = await discoverNewGamedays(teamId, knownIds, function(done, total) {
-      els.future.innerHTML = renderProgress(done, total);
+      if (els.future) els.future.innerHTML = renderProgress(done, total);
     });
 
     if (!cache) cache = { past: [], active_ids: [] };
@@ -540,7 +554,7 @@ async function loadTeam(teamId, els) {
   // Resolve display name from first matching game result
   var allEntries = cache.past.concat(activeEntries);
   var abbrev      = resolveTeamAbbrev(teamId, allEntries);
-  els.title.textContent = resolveTeamName(abbrev);
+  if (els.title) els.title.textContent = resolveTeamName(abbrev);
 
   // Live section
   var liveItems = [];
@@ -557,35 +571,41 @@ async function loadTeam(teamId, els) {
     els.live.innerHTML = '';
   }
 
-  // Past section — show last 3, rest collapsible
-  var pastSorted = cache.past.slice().sort(function(a,b) { return b.gd.date.localeCompare(a.gd.date); });
-  if (!pastSorted.length) {
-    els.past.innerHTML = '<div class="no-data">Keine vergangenen Spieltage gefunden.</div>';
-  } else {
-    var visible = pastSorted.slice(0, 3);
-    var hidden  = pastSorted.slice(3);
-    var html    = visible.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('');
-    if (hidden.length) {
-      html += '<details class="more-gamedays"><summary>' + hidden.length + ' ältere Spieltage</summary>'
-        + hidden.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('')
-        + '</details>';
+  // Past section
+  if (els.past) {
+    var pastSorted = cache.past.slice().sort(function(a,b) { return b.gd.date.localeCompare(a.gd.date); });
+    if (!pastSorted.length) {
+      els.past.innerHTML = '<div class="no-data">Keine vergangenen Spieltage gefunden.</div>';
+    } else {
+      var visible = pastSorted.slice(0, cfg.past);
+      var hidden  = pastSorted.slice(cfg.past);
+      var html    = visible.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('');
+      if (hidden.length) {
+        html += '<details class="more-gamedays"><summary>' + hidden.length + ' ältere Spieltage</summary>'
+          + hidden.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('')
+          + '</details>';
+      }
+      els.past.innerHTML = html;
     }
-    els.past.innerHTML = html;
   }
 
   // Future/active section
-  var futureEntries = activeEntries
-    .filter(function(e) { return classifyGameday(e.gd, e.games, teamId, today) === 'active'; })
-    .sort(function(a,b) { return a.gd.date.localeCompare(b.gd.date); });
-  els.future.innerHTML = futureEntries.length
-    ? futureEntries.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, false); }).join('')
-    : '<div class="no-data">Keine kommenden Spieltage geplant.</div>';
+  if (els.future) {
+    var futureEntries = activeEntries
+      .filter(function(e) { return classifyGameday(e.gd, e.games, teamId, today) === 'active'; })
+      .sort(function(a,b) { return a.gd.date.localeCompare(b.gd.date); });
+    if (cfg.future > 0) futureEntries = futureEntries.slice(0, cfg.future);
+    els.future.innerHTML = futureEntries.length
+      ? futureEntries.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, false); }).join('')
+      : '<div class="no-data">Keine kommenden Spieltage geplant.</div>';
+  }
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 (async function() {
   var cfg = parseConfig();
   document.documentElement.style.setProperty('--accent', '#' + cfg.color);
+  if (cfg.compact) document.body.classList.add('compact');
 
   if (cfg.teams.length === 0) {
     document.getElementById('root').innerHTML =
@@ -601,12 +621,17 @@ async function loadTeam(teamId, els) {
   cfg.teams.forEach(function(teamId) {
     var block = document.createElement('div');
     block.className = 'team-block';
-    block.innerHTML = '<div class="team-title" id="t-title-' + teamId + '">Team ' + teamId + '</div>'
-      + '<div id="t-live-'   + teamId + '"></div>'
-      + '<div class="section-title">Vergangene Spieltage</div>'
-      + '<div id="t-past-'   + teamId + '"><div class="loading">Lade Daten…</div></div>'
-      + '<div class="section-title">Kommende Spieltage</div>'
-      + '<div id="t-future-' + teamId + '"><div class="loading">Lade Daten…</div></div>';
+    block.innerHTML =
+      (cfg.showTitle ? '<div class="team-title" id="t-title-' + teamId + '">Team ' + teamId + '</div>' : '')
+      + '<div id="t-live-' + teamId + '"></div>'
+      + (cfg.showPast
+          ? '<div class="section-title">Vergangene Spieltage</div>'
+            + '<div id="t-past-' + teamId + '"><div class="loading">Lade Daten…</div></div>'
+          : '')
+      + (cfg.showFuture
+          ? '<div class="section-title">Kommende Spieltage</div>'
+            + '<div id="t-future-' + teamId + '"><div class="loading">Lade Daten…</div></div>'
+          : '');
     root.appendChild(block);
     elMap[teamId] = {
       title:  document.getElementById('t-title-'  + teamId),
@@ -618,13 +643,13 @@ async function loadTeam(teamId, els) {
 
   await Promise.all(cfg.teams.map(async function(teamId) {
     try {
-      await loadTeam(teamId, elMap[teamId]);
+      await loadTeam(teamId, elMap[teamId], cfg);
     } catch(err) {
       console.error('Widget error (team ' + teamId + '):', err);
       var errBanner = '<div class="error-banner">Fehler beim Laden: ' + escapeHtml(err.message) + '</div>';
-      elMap[teamId].future.innerHTML = errBanner; // escapeHtml applied to err.message above
-      if (elMap[teamId].past.querySelector('.loading'))
-        elMap[teamId].past.innerHTML = errBanner; // same safe string
+      if (elMap[teamId].future) elMap[teamId].future.innerHTML = errBanner;
+      if (elMap[teamId].past && elMap[teamId].past.querySelector('.loading'))
+        elMap[teamId].past.innerHTML = errBanner;
     }
   }));
 })();

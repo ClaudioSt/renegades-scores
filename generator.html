@@ -47,6 +47,18 @@
       background: #1a1a1a; border: 1px solid #333; border-radius: 6px;
       height: 44px; padding: 4px; cursor: pointer; width: 100%;
     }
+    input[type=number] {
+      background: #1a1a1a; border: 1px solid #333; color: #f0f0f0;
+      border-radius: 6px; padding: 10px 14px; font-size: 1rem; width: 100%; outline: none;
+    }
+    input[type=number]:focus { border-color: #555; }
+    .row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; margin-top: 4px; }
+    .checkbox-row {
+      display: flex; align-items: center; gap: 8px; cursor: pointer;
+      font-size: 0.9rem; color: #ccc; padding: 6px 0;
+    }
+    .checkbox-row input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; accent-color: #ff4500; }
     button {
       background: #ff4500; color: #fff; border: none; border-radius: 6px;
       padding: 10px 20px; font-size: 0.9rem; cursor: pointer; font-weight: 700; margin-top: 8px;
@@ -84,6 +96,25 @@
 
   <label>Akzentfarbe</label>
   <input type="color" id="color-input" value="#ff4500">
+
+  <div class="row-2col" style="margin-top:0">
+    <div>
+      <label>Vergangene Spieltage (sichtbar)</label>
+      <input type="number" id="past-count" value="3" min="1" max="50">
+    </div>
+    <div>
+      <label>Max. kommende Spieltage <span style="color:#555;font-size:0.75rem">(leer = alle)</span></label>
+      <input type="number" id="future-count" placeholder="alle" min="1" max="50">
+    </div>
+  </div>
+
+  <label>Anzeigeoptionen</label>
+  <div class="options-grid">
+    <label class="checkbox-row"><input type="checkbox" id="show-past"   checked> Vergangene Spieltage</label>
+    <label class="checkbox-row"><input type="checkbox" id="show-future" checked> Kommende Spieltage</label>
+    <label class="checkbox-row"><input type="checkbox" id="show-title"  checked> Team-Titel</label>
+    <label class="checkbox-row"><input type="checkbox" id="compact-mode"> Kompakter Modus</label>
+  </div>
 
   <div style="margin-top:24px">
     <button id="generate-btn" type="button">Embed-Code generieren</button>
@@ -294,9 +325,22 @@ document.getElementById('generate-btn').addEventListener('click', function() {
 
   if (hasErr || teams.length === 0) return;
 
-  var color  = document.getElementById('color-input').value.replace('#', '');
+  var color       = document.getElementById('color-input').value.replace('#', '');
+  var pastCount   = parseInt(document.getElementById('past-count').value,   10) || 3;
+  var futureCount = parseInt(document.getElementById('future-count').value, 10) || 0;
+  var showPast    = document.getElementById('show-past').checked;
+  var showFuture  = document.getElementById('show-future').checked;
+  var showTitle   = document.getElementById('show-title').checked;
+  var compact     = document.getElementById('compact-mode').checked;
+
   var base   = window.location.href.replace('generator.html', 'widget.html');
   var params = teams.map(function(t) { return 't=' + t; }).join('&') + '&color=' + color;
+  if (pastCount  !== 3)  params += '&past='        + pastCount;
+  if (futureCount > 0)   params += '&future='      + futureCount;
+  if (!showPast)         params += '&show_past=0';
+  if (!showFuture)       params += '&show_future=0';
+  if (!showTitle)        params += '&title=0';
+  if (compact)           params += '&compact=1';
   var src    = base + '?' + params;
 
   var embedCode = '<iframe\n  src="' + src + '"\n  width="100%"\n  height="800"\n  frameborder="0"\n  style="border:none;"\n></iframe>';
