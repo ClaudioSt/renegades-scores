@@ -121,7 +121,15 @@
   </div>
 
   <div id="output-section">
-    <h2>Embed-Code</h2>
+    <h2>Schritt 1 — Einmalig auf der Seite einfügen</h2>
+    <p style="font-size:0.8rem;color:#888;margin-bottom:8px;">Dieses Script nur einmal pro Seite einfügen (passt die Höhe automatisch an).</p>
+    <textarea id="listener-output" readonly rows="4"></textarea>
+    <div class="copy-row">
+      <button class="secondary" id="copy-listener-btn" type="button">Kopieren</button>
+      <span class="copy-confirm" id="copy-listener-confirm">Kopiert!</span>
+    </div>
+
+    <h2 style="margin-top:24px;">Schritt 2 — Widget einbetten</h2>
     <textarea id="embed-output" readonly></textarea>
     <div class="copy-row">
       <button class="secondary" id="copy-btn" type="button">Kopieren</button>
@@ -343,27 +351,40 @@ document.getElementById('generate-btn').addEventListener('click', function() {
   if (compact)           params += '&compact=1';
   var src    = base + '?' + params;
 
-  var widgetId  = 'scores-widget-' + teams.join('-');
+  var listenerCode = '<script>'
+    + '\nwindow.addEventListener(\'message\',function(e){'
+    + 'if(e.data&&e.data.type===\'iframeHeight\'){'
+    + 'var fs=document.getElementsByTagName(\'iframe\');'
+    + 'for(var i=0;i<fs.length;i++){'
+    + 'try{if(fs[i].contentWindow===e.source){'
+    + 'fs[i].style.height=e.data.height+\'px\';break;}}'
+    + 'catch(ex){}}}});</s' + 'cript>';
+
   var embedCode = '<iframe'
-    + '\n  id="'        + widgetId + '"'
     + '\n  src="'       + src + '"'
     + '\n  width="100%"'
     + '\n  height="400"'
     + '\n  frameborder="0"'
     + '\n  allowtransparency="true"'
-    + '\n  style="border:none;overflow:hidden;background:transparent"'
-    + '\n></iframe>'
-    + '\n<script>'
-    + '\nwindow.addEventListener(\'message\',function(e){'
-    + 'if(e.data&&e.data.type===\'iframeHeight\'){'
-    + 'var f=document.getElementById(\'' + widgetId + '\');'
-    + 'if(f)f.height=e.data.height;}});</s' + 'cript>';
+    + '\n  style="border:none;overflow:hidden"'
+    + '\n></iframe>';
 
+  document.getElementById('listener-output').value = listenerCode;
   document.getElementById('embed-output').value = embedCode;
   document.getElementById('preview-link').href  = src;
   document.getElementById('output-section').style.display = 'block';
   document.getElementById('preview-frame').src              = src;
   document.getElementById('preview-frame-wrap').style.display = 'block';
+});
+
+document.getElementById('copy-listener-btn').addEventListener('click', function() {
+  navigator.clipboard.writeText(document.getElementById('listener-output').value).catch(function() {
+    document.getElementById('listener-output').select();
+    document.execCommand('copy');
+  });
+  var confirm = document.getElementById('copy-listener-confirm');
+  confirm.classList.add('show');
+  setTimeout(function() { confirm.classList.remove('show'); }, 2000);
 });
 
 document.getElementById('copy-btn').addEventListener('click', function() {
