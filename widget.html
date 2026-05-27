@@ -639,6 +639,19 @@ async function loadTeam(teamId, els, cfg) {
   }
 }
 
+function renderPastSection(pastSorted, teamId, visibleCount) {
+  if (!pastSorted.length) return '';
+  var shown = pastSorted.slice(0, visibleCount);
+  var html  = shown.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('');
+  var remaining = pastSorted.length - visibleCount;
+  if (remaining > 0) {
+    html += '<button class="load-more" data-team="' + teamId + '" data-visible="' + visibleCount + '">'
+      + 'Weitere laden (' + remaining + ')'
+      + '</button>';
+  }
+  return html;
+}
+
 // ── VIEW RENDERERS ───────────────────────────────────────────────────────────
 async function renderSpielplan(root, cfg) {
   var elMap = {};
