@@ -5,33 +5,34 @@
 See: .planning/PROJECT.md (updated 2026-05-27)
 
 **Core value:** Existing embeds on external sites must never break — backwards compatibility is non-negotiable.
-**Current focus:** Phase 1 — URL Routing & View Dispatch
+**Current focus:** Phase 2 complete — ready for Phase 3 (League Config)
 
 ## Current Position
 
-Phase: 1 of 7 (URL Routing & View Dispatch)
-Plan: 2 of 2 in current phase
+Phase: 2 of 7 (Spielplan Enhancements)
+Plan: 4 of 4 in current phase
 Status: Phase complete
-Last activity: 2026-05-27 — Completed 01-02-PLAN.md
+Last activity: 2026-05-27 — Completed 02-04-PLAN.md
 
-Progress: ██░░░░░░░░ 29% (2/7 phases planned; phase 1 executed)
+Progress: ████░░░░░░ 43% (6/14 plans complete)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
+- Total plans completed: 6
 - Average duration: ~2 min/plan
-- Total execution time: ~4 min
+- Total execution time: ~8 min
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | Phase 1 | 2 | ~4 min | ~2 min |
+| Phase 2 | 4 | ~4 min | ~1 min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (TDD), 01-02 (auto)
-- Trend: —
+- Last 5 plans: 02-01 (TDD), 02-02 (execute), 02-03 (TDD), 02-04 (execute)
+- Trend: fast parallel sequential execution
 
 ## Accumulated Context
 
@@ -47,6 +48,8 @@ Recent decisions affecting current work:
 | 01-02 | `renderTableView` is empty stub | Phase 5 implements it; no placeholder text avoids confusion |
 | 01-02 | Dispatch uses `if/else` not `switch` | Unknown views fall back to spielplan (safe default) |
 | 01-02 | Both renderers are top-level functions | Accessible from test VM context for future test plans |
+| 02-02 | `_pastCache` module-level map for click handler | Click handler needs pastSorted at click time; closure via map is clean |
+| 02-02 | Shape-mapping in quickRenderFromSnap | Snapshot objects are `{id,date,...,games:[]}` not `{gd,games}` — mapped before cache |
 
 ### Deferred Issues
 
@@ -54,10 +57,13 @@ None yet.
 
 ### Blockers/Concerns
 
-None yet.
+Phase 2 human-verify checkpoints (02-02, 02-04) were skipped due to skip_checkpoints=true.
+User should manually verify in browser:
+- "Weitere laden" button works (widget.html?t=159&past=2)
+- Next-game highlight card appears (widget.html?t=159)
 
 ## Session Continuity
 
 Last session: 2026-05-27
-Stopped at: Completed 01-02-PLAN.md (Phase 1 complete)
+Stopped at: Completed 02-04-PLAN.md (Phase 2 complete)
 Resume file: None

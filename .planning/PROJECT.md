@@ -42,13 +42,36 @@ Existing embeds on external sites must never break — backwards compatibility i
 
 ## Context
 
-**League structure:**
-- DFFL = Deutsche Flag Football Ligen. Each Spieltag is a tournament day where teams play 2–5 games of ~60 min.
-- DKB DFFL: top-tier national men's league (Final8 playoff format)
-- FF BL: Flag Football Bayern-Liga (Bavarian state league)
-- DFFL Süd-Ost: regional league (feeds into DFFL2 via promotion playoffs)
-- Season phases: Gruppenphase → Playoffs (exact phase names vary per league, e.g. "Vorrunde", "Finale")
-- Nürnberg Renegades = team ID 159, Renegades II = team ID 287
+**League hierarchy (men's, Bavaria):**
+```
+FF BL (Flag Football Bayern-Liga — Oberliga / Bayernliga level, ~14 teams)
+  ↓ promotion via Aufstiegsrelegation
+RL Bayern (Regionalliga Bayern — 8 teams in 2026)
+  ↓ promotion via Aufstiegsrelegation
+DFFL2 (Deutsche Flag Football Liga 2 — national, 20 teams)
+  ↓ top 3 of Final6
+DKB DFFL (Deutsche Flag Football Liga — national top tier, 16 teams, Final8)
+```
+Note: Ligaordnung groups "RL Bayern + Bayernliga (FF BL)" together for promotion slot allocation.
+- Each Spieltag is a tournament day where teams play 2–5 games of ~60 min
+- Nürnberg Renegades = team ID 159 (DKB DFFL), Renegades II = team ID 287 (FF BL)
+
+**FF BL 2026 — confirmed data (researched 2026-05-27):**
+- 14 teams, 5 gameday events (IDs: 832, 834, 842, 844, 845)
+- Teams: Bamberg Phantoms (29), Ingolstadt Guardians (152), Ramsenthal RedWings (221), AFC Königsbrunn Ants (223), Munich Spatzen 4 (254), Nürnberg Renegades II (287), Rödental Racoons (391), Ingolstadt Guardians 2 (392), Erlangen Sharks 2 (393), Erding Bulls II (492), Neumarkt Wolves (500), Ramsenthal RedWings II (501), Neustadt Falcons (502), Regensburg Phoenix III (505)
+- Promotion-blocked teams (parent club has team in RL Bayern, per §28.3 Ligaordnung):
+  - Munich Spatzen 4 (254) — Spatz3 (66) is in RL Bayern
+  - Erding Bulls II (492) — Erding Bulls (160) is in RL Bayern
+  - Regensburg Phoenix III (505) — Regen2 (288) is in RL Bayern
+- NOT blocked: Nürn2 (287) — Nürn1 (159) skips RL and is in DKB DFFL directly
+- NOT blocked: Erlangen2, Ingol2, Ramsenthal2 — no sibling in RL Bayern
+
+**Standings formula (Ligaordnung 2026, confirmed):**
+- Metric: **Wertungspunktequotient (SQ)** = (2×W + 1×D) / (2×Sp)
+- Columns: SQ (win quotient), EP (points scored), GP (opponent points), PD (point diff), S (wins), U (draws), N (losses), Sp (games played)
+- Promotion restriction rule (§28.3): a team is ineligible for the Aufstiegsrelegation if another team from the same Verein is already qualified for the next higher league
+- For DFFL2 Final6 (§25.3): teams with "II" suffix can participate but are not aufstiegsberechtigt
+- `league-config.json` must store `promotion_restricted` team IDs per season (manually maintained, cannot be derived automatically)
 
 **Standings computation:**
 - Standings for completed games are derived from existing game results in `snapshot.json` — no new API endpoint needed
