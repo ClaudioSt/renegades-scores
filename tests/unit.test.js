@@ -738,3 +738,80 @@ describe('renderPastSection', () => {
     assert.ok(html.includes('gameday-card'));
   });
 });
+
+// ─── findNextGame ─────────────────────────────────────────────────────────────
+
+describe('findNextGame', () => {
+  let w;
+  const today = '2026-05-27';
+
+  const mkEntry = (date, games) => ({
+    id: parseInt(date.replace(/-/g, ''), 10),
+    gd: { id: parseInt(date.replace(/-/g, ''), 10), date },
+    games,
+  });
+
+  const mkGame = (teamId, status) => ({
+    id: teamId * 100,
+    status: status || 'scheduled',
+    scheduled: null,
+    results: [
+      { team_id: teamId, team_name: 'Nürn', pa: null, isHome: false },
+      { team_id: 99,     team_name: 'Opp',  pa: null, isHome: true  },
+    ],
+  });
+
+  beforeEach(() => { w = freshContext(); });
+
+  it('returns null for empty activeEntries', () => {
+    assert.equal(w.findNextGame([], 159, today), null);
+  });
+
+  it('returns null when all entries have gd.date before today', () => {
+    const entries = [
+      mkEntry('2026-01-01', [mkGame(159)]),
+      mkEntry('2026-03-15', [mkGame(159)]),
+    ];
+    assert.equal(w.findNextGame(entries, 159, today), null);
+  });
+
+  it('returns {gd, game} for a single future entry with team game', () => {
+    const game = mkGame(159);
+    const entry = mkEntry('2026-06-01', [game]);
+    const result = w.findNextGame([entry], 159, today);
+    assert.ok(result !== null);
+    assert.deepEqual(result.gd, entry.gd);
+    assert.deepEqual(result.game, game);
+  });
+
+  it('returns the earliest-dated entry when multiple future entries exist', () => {
+    const earlyEntry = mkEntry('2026-06-01', [mkGame(159)]);
+    const laterEntry = mkEntry('2026-07-15', [mkGame(159)]);
+    const result = w.findNextGame([laterEntry, earlyEntry], 159, today);
+    assert.ok(result !== null);
+    assert.equal(result.gd.date, '2026-06-01');
+  });
+
+  it('returns null when no game has the given teamId', () => {
+    const entries = [
+      mkEntry('2026-06-01', [mkGame(777), mkGame(888)]),
+    ];
+    assert.equal(w.findNextGame(entries, 159, today), null);
+  });
+
+  it('skips games with status final', () => {
+    const entries = [
+      mkEntry('2026-06-01', [mkGame(159, 'final')]),
+    ];
+    assert.equal(w.findNextGame(entries, 159, today), null);
+  });
+
+  it('returns first matching game when team appears in multiple games of an entry', () => {
+    const game1 = mkGame(159, 'scheduled');
+    const game2 = Object.assign({}, mkGame(159, 'scheduled'), { id: 999 });
+    const entry = mkEntry('2026-06-01', [game1, game2]);
+    const result = w.findNextGame([entry], 159, today);
+    assert.ok(result !== null);
+    assert.equal(result.game.id, game1.id);
+  });
+});
