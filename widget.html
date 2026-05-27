@@ -639,23 +639,9 @@ async function loadTeam(teamId, els, cfg) {
   }
 }
 
-// ── INIT ─────────────────────────────────────────────────────────────────────
-(async function() {
-  var cfg = parseConfig();
-  document.documentElement.style.setProperty('--accent', '#' + cfg.color);
-  if (cfg.compact) document.body.classList.add('compact');
-
-  if (cfg.teams.length === 0) {
-    document.getElementById('root').innerHTML =
-      '<div class="error-banner">Kein Team konfiguriert. Bitte ?t=&lt;team_id&gt; in der URL angeben.</div>';
-    return;
-  }
-
-  if (cfg.refresh) cfg.teams.forEach(function(id) { clearCache(id); });
-
-  var root   = document.getElementById('root');
-  var elMap  = {};
-
+// ── VIEW RENDERERS ───────────────────────────────────────────────────────────
+async function renderSpielplan(root, cfg) {
+  var elMap = {};
   cfg.teams.forEach(function(teamId) {
     var block = document.createElement('div');
     block.className = 'team-block';
@@ -690,7 +676,33 @@ async function loadTeam(teamId, els, cfg) {
         elMap[teamId].past.innerHTML = errBanner;
     }
   }));
+}
 
+function renderTableView(root, cfg) {
+  root.innerHTML = '';
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+(async function() {
+  var cfg = parseConfig();
+  document.documentElement.style.setProperty('--accent', '#' + cfg.color);
+  if (cfg.compact) document.body.classList.add('compact');
+
+  if (cfg.teams.length === 0) {
+    document.getElementById('root').innerHTML =
+      '<div class="error-banner">Kein Team konfiguriert. Bitte ?t=&lt;team_id&gt; in der URL angeben.</div>';
+    return;
+  }
+
+  if (cfg.refresh) cfg.teams.forEach(function(id) { clearCache(id); });
+
+  var root = document.getElementById('root');
+
+  if (cfg.view === 'table') {
+    renderTableView(root, cfg);
+  } else {
+    await renderSpielplan(root, cfg);
+  }
 })();
 
 function reportHeight() {
