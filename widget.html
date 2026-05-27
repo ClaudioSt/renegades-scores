@@ -147,8 +147,9 @@ function parseConfigFromSearch(search) {
   var showFuture  = params.get('show_future') !== '0';
   var showTitle   = params.get('title')       !== '0';
   var compact     = params.get('compact')     === '1';
+  var view        = params.get('view') || 'spielplan';
   return { teams: teams, color: color, refresh: refresh, past: past, future: future,
-           showPast: showPast, showFuture: showFuture, showTitle: showTitle, compact: compact };
+           showPast: showPast, showFuture: showFuture, showTitle: showTitle, compact: compact, view: view };
 }
 function parseConfig() { return parseConfigFromSearch(window.location.search); }
 
@@ -462,7 +463,7 @@ function renderGamedayCard(gd, games, teamId, showScore) {
   var start  = escapeHtml(gd.start);
   var league = escapeHtml(gd.league_display || '');
   var addrRaw = (gd.address || '').trim();
-  var skipAddr = ['tba','tbd','','adresse folgt'].some(function(s) { return addrRaw.toLowerCase().startsWith(s); });
+  var skipAddr = !addrRaw || ['tba','tbd','adresse folgt'].some(function(s) { return addrRaw.toLowerCase().startsWith(s); });
   var addr   = skipAddr ? '' : '<span>📍 ' + escapeHtml(addrRaw.split(',')[0]) + '</span>';
 
   return '<div class="gameday-card">'
