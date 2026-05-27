@@ -491,6 +491,24 @@ function renderGamedayCard(gd, games, teamId, showScore) {
     + '</div>';
 }
 
+function renderNextGameCard(gd, game, teamId) {
+  var me    = game.results.find(function(r) { return r.team_id === teamId; });
+  var other = game.results.find(function(r) { return r.team_id !== teamId; });
+  if (!me || !other) return '';
+  var time = '';
+  if (game.scheduled) {
+    var t = game.scheduled.slice(11, 16);
+    if (t) time = ' · ' + t + ' Uhr';
+  }
+  var location = me.isHome ? 'Heimspiel' : 'Auswärtsspiel';
+  return '<div class="next-game-highlight">'
+    + '<div class="next-game-label">Nächstes Spiel</div>'
+    + '<div class="next-game-date">' + escapeHtml(formatDate(gd.date)) + time + '</div>'
+    + '<div class="next-game-name">' + escapeHtml(gd.name) + '</div>'
+    + '<div class="next-game-opponent">' + escapeHtml(location) + ' · ' + escapeHtml(other.team_name) + '</div>'
+    + '</div>';
+}
+
 function resolveTeamAbbrev(teamId, entries) {
   for (var i = 0; i < entries.length; i++) {
     var games = entries[i].games;
@@ -636,9 +654,11 @@ async function loadTeam(teamId, els, cfg) {
       .filter(function(e) { return classifyGameday(e.gd, e.games, teamId, today) === 'active'; })
       .sort(function(a,b) { return a.gd.date.localeCompare(b.gd.date); });
     if (cfg.future > 0) futureEntries = futureEntries.slice(0, cfg.future);
-    els.future.innerHTML = futureEntries.length
+    var nextResult = findNextGame(futureEntries, teamId, today);
+    var highlightHtml = nextResult ? renderNextGameCard(nextResult.gd, nextResult.game, teamId) : '';
+    els.future.innerHTML = highlightHtml + (futureEntries.length
       ? futureEntries.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, false); }).join('')
-      : '<div class="no-data">Keine kommenden Spieltage geplant.</div>';
+      : '<div class="no-data">Keine kommenden Spieltage geplant.</div>');
   }
 }
 
