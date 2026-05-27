@@ -674,6 +674,16 @@ async function renderSpielplan(root, cfg) {
         elMap[teamId].past.innerHTML = errBanner;
     }
   }));
+
+  root.addEventListener('click', function(e) {
+    var btn = e.target.closest('.load-more');
+    if (!btn) return;
+    var teamId     = parseInt(btn.getAttribute('data-team'), 10);
+    var newVisible = parseInt(btn.getAttribute('data-visible'), 10) + 3;
+    var pastEl = document.getElementById('t-past-' + teamId);
+    if (!pastEl || !_pastCache[teamId]) return;
+    pastEl.innerHTML = renderPastSection(_pastCache[teamId], teamId, newVisible);
+  });
 }
 
 function renderTableView(root, cfg) {
