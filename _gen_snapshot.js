@@ -27,6 +27,8 @@ const PLACEHOLDER_RE = /^(Gewinner|Verlierer|[A-Z]\d{1,2}$|[PGQ]\d+\s*(Gruppe|HF
 const EVENT_NAME_RE  = /^\d+\.?\s*(Spieltag|Spielrunde)|Spieltag\s*\d+|Turnier|Cup\b|Finale|Pokal|Meisterschaft|Halbfinale|Viertelfinale|Relegation|Aufstieg|Abstieg/i;
 function looksLikeTeamName(name) { return !!name && !EVENT_NAME_RE.test(name); }
 
+const { loadLeagueConfig } = require('./league-config.js');
+
 async function fetchJSON(url, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
@@ -191,6 +193,9 @@ function buildTeams(withGames, teamNameMap) {
 }
 
 (async () => {
+  const leagueConfig = loadLeagueConfig('./league-config.json');
+  console.log('League config loaded: ' + Object.keys(leagueConfig).join(', '));
+
   const rebuild = process.argv.includes('--rebuild');
   let withGames;
 
