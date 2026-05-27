@@ -549,10 +549,10 @@ describe('quickRenderFromSnap with real snapshot', () => {
     assert.ok(el._get().includes('gameday-card'));
   });
 
-  it('collapses older gamedays when past count exceeds cfg.past=2', () => {
+  it('shows load-more button when past count exceeds cfg.past=2', () => {
     const el = mkEl();
     w.quickRenderFromSnap(snap, 159, { past: el, future: null }, { past: 2, future: 0 }, today);
-    assert.ok(el._get().includes('more-gamedays'));
+    assert.ok(el._get().includes('load-more'));
   });
 
   it('renders upcoming gamedays for team 159', () => {

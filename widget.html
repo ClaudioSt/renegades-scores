@@ -107,14 +107,10 @@
       .game-row .team-home, .game-row .team-away { font-size: 0.8rem; }
       .score-box .score { font-size: 1rem; }
     }
-    .more-gamedays { margin-top: 8px; }
-    .more-gamedays summary {
-      cursor: pointer; font-size: 0.8rem; font-weight: 700; color: #888;
-      text-transform: uppercase; letter-spacing: 2px; padding: 10px 0; list-style: none;
-    }
-    .more-gamedays summary::-webkit-details-marker { display: none; }
-    .more-gamedays summary::before { content: ''; }
-    .more-gamedays[open] summary::before { content: ''; }
+    .load-more { display:block; width:100%; margin:6px 0 0; padding:6px 0;
+      background:none; border:1px solid var(--accent); border-radius:4px;
+      color:var(--accent); font-size:0.85rem; cursor:pointer; }
+    .load-more:hover { background:rgba(var(--accent-rgb,255,69,0),0.08); }
     body.compact { padding: 12px; }
     body.compact .team-block { margin-bottom: 28px; }
     body.compact .gameday-card { margin-bottom: 10px; }
@@ -134,6 +130,7 @@ var LIVETICKER_BASE   = 'https://leaguesphere.app/liveticker/';
 var BATCH_SIZE        = 50;
 var DISCOVERY_TTL_MS  = 7 * 24 * 60 * 60 * 1000;
 var CACHE_VERSION     = 3;
+var _pastCache        = {};
 
 // ── URL PARAMS ───────────────────────────────────────────────────────────────
 function parseConfigFromSearch(search) {
@@ -502,14 +499,9 @@ function quickRenderFromSnap(snap, teamId, els, cfg, today) {
     .sort(function(a, b) { return a.date.localeCompare(b.date); });
 
   if (els.past && past.length) {
-    var pv = past.slice(0, cfg.past);
-    var ph = past.slice(cfg.past);
-    var snapHtml = pv.map(function(gd) { return renderGamedayCard(gd, gd.games, teamId, true); }).join('');
-    if (ph.length) {
-      snapHtml += '<details class="more-gamedays"><summary>' + ph.length + ' ältere Spieltage</summary>'
-        + ph.map(function(gd) { return renderGamedayCard(gd, gd.games, teamId, true); }).join('') + '</details>';
-    }
-    els.past.innerHTML = snapHtml;
+    var pastWrapped = past.map(function(gd) { return { gd: gd, games: gd.games }; });
+    _pastCache[teamId] = pastWrapped;
+    els.past.innerHTML = renderPastSection(pastWrapped, teamId, cfg.past);
   }
   if (els.future && active.length) {
     var sf = cfg.future > 0 ? active.slice(0, cfg.future) : active;
@@ -615,15 +607,8 @@ async function loadTeam(teamId, els, cfg) {
     if (!pastSorted.length) {
       els.past.innerHTML = '<div class="no-data">Keine vergangenen Spieltage gefunden.</div>';
     } else {
-      var visible = pastSorted.slice(0, cfg.past);
-      var hidden  = pastSorted.slice(cfg.past);
-      var html    = visible.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('');
-      if (hidden.length) {
-        html += '<details class="more-gamedays"><summary>' + hidden.length + ' ältere Spieltage</summary>'
-          + hidden.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('')
-          + '</details>';
-      }
-      els.past.innerHTML = html;
+      _pastCache[teamId] = pastSorted;
+      els.past.innerHTML = renderPastSection(pastSorted, teamId, cfg.past);
     }
   }
 
