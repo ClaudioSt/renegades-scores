@@ -42,6 +42,7 @@ stored as `game.log = { l, r, ev[] }` in snapshot. Never fetch from client.
   teams: [{ id, abbrev, name, gamedays: [{id, date, name, league}] }],
   gamedays: [{
     id, date, name, start, league_display, address,
+    phase?,           // only set for gamedays in league-config.json
     games: [{
       id, status, stage, standing, scheduled, field,
       final_score, halftime_score,
