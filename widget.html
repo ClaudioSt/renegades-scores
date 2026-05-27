@@ -638,6 +638,26 @@ function renderPastSection(pastSorted, teamId, visibleCount) {
 }
 
 // ── VIEW RENDERERS ───────────────────────────────────────────────────────────
+
+var findNextGame = function(activeEntries, teamId, today) {
+  var qualifying = activeEntries.filter(function(entry) {
+    return entry.gd.date >= today;
+  });
+  qualifying.sort(function(a, b) {
+    return a.gd.date < b.gd.date ? -1 : a.gd.date > b.gd.date ? 1 : 0;
+  });
+  for (var i = 0; i < qualifying.length; i++) {
+    var entry = qualifying[i];
+    for (var j = 0; j < entry.games.length; j++) {
+      var game = entry.games[j];
+      if (game.status === 'final') continue;
+      var hasTeam = game.results.some(function(r) { return r.team_id === teamId; });
+      if (hasTeam) return { gd: entry.gd, game: game };
+    }
+  }
+  return null;
+};
+
 async function renderSpielplan(root, cfg) {
   var elMap = {};
   cfg.teams.forEach(function(teamId) {
