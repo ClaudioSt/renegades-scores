@@ -629,3 +629,112 @@ describe('resolveTeamAbbrev', () => {
     assert.equal(w.resolveTeamAbbrev(159, []), '159');
   });
 });
+
+// ─── renderPastSection ────────────────────────────────────────────────────────
+
+describe('renderPastSection', () => {
+  let w;
+
+  const mkEntry = (id) => ({
+    id,
+    gd: { id, date: '2026-0' + id + '-01', name: 'Spieltag ' + id, start: '10:00', league_display: 'Liga', address: '' },
+    games: [{
+      id: id * 100, status: 'beendet', stage: 'Hauptrunde', standing: 'Gruppe 1',
+      scheduled: '10:00', field: 1,
+      final_score: { home: 20, away: 14 }, halftime_score: { home: 10, away: 7 },
+      results: [
+        { team_id: 159, team_name: 'Nürn', pa: 20, isHome: true },
+        { team_id: 99,  team_name: 'Opp',  pa: 14, isHome: false },
+      ],
+    }],
+  });
+
+  beforeEach(() => {
+    w = freshContext();
+    w._teamNameByAbbrev['Nürn'] = 'Nürnberg Renegades';
+  });
+
+  it('returns empty string for empty array', () => {
+    assert.equal(w.renderPastSection([], 159, 3), '');
+  });
+
+  it('renders all cards when visibleCount equals length', () => {
+    const entries = [mkEntry(1), mkEntry(2), mkEntry(3)];
+    const html = w.renderPastSection(entries, 159, 3);
+    assert.ok(html.includes('gameday-card'));
+    assert.equal((html.match(/gameday-card/g) || []).length, 3);
+  });
+
+  it('renders all cards when visibleCount exceeds length', () => {
+    const entries = [mkEntry(1), mkEntry(2)];
+    const html = w.renderPastSection(entries, 159, 5);
+    assert.equal((html.match(/gameday-card/g) || []).length, 2);
+  });
+
+  it('does not render a button when visibleCount >= length', () => {
+    const entries = [mkEntry(1), mkEntry(2)];
+    const html = w.renderPastSection(entries, 159, 2);
+    assert.ok(!html.includes('load-more'));
+  });
+
+  it('renders only visibleCount cards when visibleCount < length', () => {
+    const entries = [mkEntry(1), mkEntry(2), mkEntry(3), mkEntry(4), mkEntry(5)];
+    const html = w.renderPastSection(entries, 159, 2);
+    assert.equal((html.match(/gameday-card/g) || []).length, 2);
+  });
+
+  it('renders load-more button when visibleCount < length', () => {
+    const entries = [mkEntry(1), mkEntry(2), mkEntry(3)];
+    const html = w.renderPastSection(entries, 159, 1);
+    assert.ok(html.includes('load-more'));
+  });
+
+  it('button label shows remaining count: Weitere laden (N)', () => {
+    const entries = [mkEntry(1), mkEntry(2), mkEntry(3), mkEntry(4)];
+    const html = w.renderPastSection(entries, 159, 2);
+    assert.ok(html.includes('Weitere laden (2)'));
+  });
+
+  it('button has data-team set to teamId as string', () => {
+    const entries = [mkEntry(1), mkEntry(2)];
+    const html = w.renderPastSection(entries, 159, 1);
+    assert.ok(html.includes('data-team="159"'));
+  });
+
+  it('button has data-visible set to visibleCount as string', () => {
+    const entries = [mkEntry(1), mkEntry(2), mkEntry(3)];
+    const html = w.renderPastSection(entries, 159, 2);
+    assert.ok(html.includes('data-visible="2"'));
+  });
+
+  it('renders first entry card content (Spieltag 1 name)', () => {
+    const entries = [mkEntry(1), mkEntry(2), mkEntry(3)];
+    const html = w.renderPastSection(entries, 159, 1);
+    assert.ok(html.includes('Spieltag 1'));
+  });
+
+  it('does not render second entry when visibleCount=1 with 3 entries', () => {
+    const entries = [mkEntry(1), mkEntry(2), mkEntry(3)];
+    const html = w.renderPastSection(entries, 159, 1);
+    assert.ok(!html.includes('Spieltag 2'));
+  });
+
+  it('passes teamId correctly to renderGamedayCard (team 287)', () => {
+    const entry = {
+      id: 1,
+      gd: { id: 1, date: '2026-01-01', name: 'Spieltag 1', start: '10:00', league_display: 'Liga', address: '' },
+      games: [{
+        id: 100, status: 'beendet', stage: 'Liga', standing: 'Game 1',
+        scheduled: '10:00', field: 1,
+        final_score: { home: 10, away: 7 }, halftime_score: { home: 5, away: 3 },
+        results: [
+          { team_id: 287, team_name: 'Nürn2', pa: 10, isHome: true },
+          { team_id: 99,  team_name: 'Opp',   pa: 7,  isHome: false },
+        ],
+      }],
+    };
+    w._teamNameByAbbrev['Nürn2'] = 'Nürnberg Renegades II';
+    const html = w.renderPastSection([entry], 287, 1);
+    assert.ok(html.includes('gameday-card'));
+  });
+});
