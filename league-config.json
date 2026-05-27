@@ -1,0 +1,23 @@
+{
+  "ff-bl": {
+    "2026": {
+      "name": "FF BL 2026",
+      "gameday_ids": [832, 834, 842, 844, 845],
+      "promotion_restricted": [254, 492, 505]
+    }
+  },
+  "rl-bayern": {
+    "2026": {
+      "name": "RL Bayern 2026",
+      "gameday_ids": [],
+      "promotion_restricted": []
+    }
+  },
+  "dkb-dffl": {
+    "2026": {
+      "name": "DKB DFFL 2026",
+      "gameday_ids": [],
+      "promotion_restricted": []
+    }
+  }
+}
