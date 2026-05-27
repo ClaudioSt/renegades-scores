@@ -16,7 +16,7 @@ None
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: URL Routing & View Dispatch** - Add `view=` param, wire dispatch to spielplan/table render paths, keep backwards compat
+- [x] **Phase 1: URL Routing & View Dispatch** - Add `view=` param, wire dispatch to spielplan/table render paths, keep backwards compat
 - [ ] **Phase 2: Spielplan Enhancements** - "Weitere laden" pagination (3 past gamedays/click) and next-game highlight card
 - [ ] **Phase 3: League Config** - Create `league-config.json` mapping gameday IDs to phase names per league+season
 - [ ] **Phase 4: Snapshot Extension** - Extend `_gen_snapshot.js` to compute standings blocks and tag gamedays with phases
@@ -33,9 +33,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: TBD
 
 Plans:
-- [ ] 01-01: Add `view` to `parseConfigFromSearch()` with `spielplan` default
-- [ ] 01-02: Add render dispatch — call spielplan or table renderer based on `view`
-- [ ] 01-03: Tests for backwards compat (`view` absent → spielplan) and explicit values
+- [x] 01-01: Add `view` to `parseConfigFromSearch()` with `spielplan` default
+- [x] 01-02: Add render dispatch — call spielplan or table renderer based on `view`
 
 ### Phase 2: Spielplan Enhancements
 **Goal**: Past gamedays collapsed behind "Weitere laden" button (3 per click); next upcoming game shows highlight card
@@ -109,7 +108,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. URL Routing & View Dispatch | 0/TBD | Not started | - |
+| 1. URL Routing & View Dispatch | 2/2 | Complete | 2026-05-27 |
 | 2. Spielplan Enhancements | 0/TBD | Not started | - |
 | 3. League Config | 0/TBD | Not started | - |
 | 4. Snapshot Extension | 0/TBD | Not started | - |
