@@ -18,7 +18,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: URL Routing & View Dispatch** - Add `view=` param, wire dispatch to spielplan/table render paths, keep backwards compat
 - [x] **Phase 2: Spielplan Enhancements** - "Weitere laden" pagination (3 past gamedays/click) and next-game highlight card
-- [ ] **Phase 3: League Config** - Create `league-config.json` mapping gameday IDs to phase names per league+season
+- [x] **Phase 3: League Config** - Create `league-config.json` mapping gameday IDs to phase names per league+season
 - [ ] **Phase 4: Snapshot Extension** - Extend `_gen_snapshot.js` to compute standings blocks and tag gamedays with phases
 - [ ] **Phase 5: Table View** - `view=table` rendering: standings per phase, phase selector, current team highlighted
 - [ ] **Phase 6: Generator Update** - Add `view=` selector to `generator.html` embed code tool
@@ -55,8 +55,8 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 03-01: Define `league-config.json` schema and create initial file for DKB DFFL + FF BL seasons
-- [ ] 03-02: Add config loader + validator in `_gen_snapshot.js`
+- [x] 03-01: Define `league-config.json` schema and create initial file for DKB DFFL + FF BL seasons
+- [x] 03-02: Add config loader + validator in `_gen_snapshot.js`
 
 ### Phase 4: Snapshot Extension
 **Goal**: `snapshot.json` includes `standings` block per team per phase; gamedays tagged with phase name
@@ -111,7 +111,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. URL Routing & View Dispatch | 2/2 | Complete | 2026-05-27 |
 | 2. Spielplan Enhancements | 4/4 | Complete | 2026-05-27 |
-| 3. League Config | 0/TBD | Not started | - |
+| 3. League Config | 2/2 | Complete | 2026-05-27 |
 | 4. Snapshot Extension | 0/TBD | Not started | - |
 | 5. Table View | 0/TBD | Not started | - |
 | 6. Generator Update | 0/TBD | Not started | - |
