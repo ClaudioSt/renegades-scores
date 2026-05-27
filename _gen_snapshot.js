@@ -274,6 +274,22 @@ function buildTeams(withGames, teamNameMap) {
     console.log('  ' + logGot + ' game logs stored');
   }
 
+  // Phase-tagging pass: annotate each gameday with its league-config phase name
+  const gamedayPhaseMap = {};
+  for (const [, seasons] of Object.entries(leagueConfig)) {
+    for (const [, cfg] of Object.entries(seasons)) {
+      for (const gdId of cfg.gameday_ids) {
+        gamedayPhaseMap[gdId] = cfg.name;
+      }
+    }
+  }
+  let tagged = 0;
+  for (const gd of withGames) {
+    const phase = gamedayPhaseMap[gd.id];
+    if (phase) { gd.phase = phase; tagged++; }
+  }
+  console.log('  ' + tagged + ' gamedays tagged with phase names');
+
   console.log('Fetching team names…');
   const teamNameMap = await fetchTeamNameMap();
   console.log('  ' + Object.keys(teamNameMap).length + ' team names indexed');
