@@ -104,6 +104,25 @@
     .game-log .log-r { text-align: left; }
     .game-log .log-marker td { text-align: center; color: #444; font-style: italic; padding: 5px 0; }
     .game-log s { color: #555; }
+    .standings-wrapper { max-width: 900px; margin: 0 auto; }
+    .standings-league-title {
+      font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 3px; color: #888; margin: 24px 0 12px 0;
+    }
+    .standings-table { width: 100%; border-collapse: collapse; }
+    .standings-table th {
+      font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px;
+      color: #555; padding: 8px 6px; border-bottom: 1px solid #333; text-align: right;
+    }
+    .standings-table th.col-team { text-align: left; }
+    .standings-table td {
+      padding: 8px 6px; border-bottom: 1px solid #1c1c1c;
+      font-size: 0.85rem; text-align: right; color: #ccc;
+    }
+    .standings-table td.col-team { text-align: left; font-weight: 600; color: #f0f0f0; }
+    .standings-row-highlight td { color: var(--accent); font-weight: 700; }
+    .standings-row-restricted td { opacity: 0.55; }
+    .standings-empty { color: #555; font-size: 0.85rem; padding: 16px 0; }
     .score-box .time { font-size: 0.75rem; color: #888; }
     .score-box .score { font-size: 1.2rem; font-weight: 900; color: #fff; }
     .score-box .score.win  { color: #4caf50; }
