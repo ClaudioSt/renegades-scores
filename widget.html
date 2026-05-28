@@ -107,6 +107,7 @@
     .standings-row-highlight td { color: var(--accent); font-weight: 700; }
     .standings-row-restricted td { opacity: 0.55; }
     .standings-empty { color: #555; font-size: 0.85rem; padding: 16px 0; }
+    .team-logo { width: 24px; height: 24px; object-fit: contain; vertical-align: middle; margin-right: 5px; border-radius: 2px; }
     .year-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
     .year-tab {
       background: #222; color: #888; border: 1px solid #333;
@@ -161,6 +162,32 @@ var BATCH_SIZE        = 50;
 var DISCOVERY_TTL_MS  = 7 * 24 * 60 * 60 * 1000;
 var CACHE_VERSION     = 3;
 var _pastCache        = {};
+
+// Team logo paths (relative, served from logos/ directory)
+var TEAM_LOGOS = {
+  20:  'logos/20.png',  // Munich Spatzen
+  22:  'logos/22.png',  // Augsburg Lions
+  24:  'logos/24.png',  // Badener Greifs
+  30:  'logos/30.png',  // Walldorf Wanderers
+  38:  'logos/38.gif',  // Mülheim Shamrocks
+  41:  'logos/41.jpg',  // Mainz Legionaries
+  43:  'logos/43.png',  // Duisburg Dragons
+  48:  'logos/48.png',  // SG Kelkheim Lizzards
+  49:  'logos/49.png',  // SG Kelkheim Lizzards II
+  52:  'logos/52.png',  // Baltic Blue Stars
+  54:  'logos/54.png',  // Lübeck Flag Cougars
+  69:  'logos/69.png',  // Würzburg Wombats
+  96:  'logos/96.png',  // Castrop Raptors
+  112: 'logos/112.png', // Lichtenberg Lions
+  115: 'logos/115.png', // Strelitz Dukes
+  133: 'logos/133.png', // Bornheim Badgers
+  134: 'logos/134.png', // Bedburg Raccoons
+  136: 'logos/136.svg', // Münster Blackhawks
+  159: 'logos/159.png', // Nürnberg Renegades
+  163: 'logos/163.png', // Oldenburg Orcas
+  238: 'logos/238.png', // Düsseldorf Firecats
+  269: 'logos/269.jpg', // Hamburg Pioneers Red Pandas
+};
 
 // ── URL PARAMS ───────────────────────────────────────────────────────────────
 function parseConfigFromSearch(search) {
@@ -738,7 +765,9 @@ function renderStandingsTable(entry, teamIds) {
     if (restricted.indexOf(row.team_id) >= 0) cls += ' standings-row-restricted';
     return '<tr class="' + cls.trim() + '">'
       + '<td class="col-rank">' + (i + 1) + '.</td>'
-      + '<td class="col-team">' + escapeHtml(row.team_name) + '</td>'
+      + '<td class="col-team">'
+      + (TEAM_LOGOS[row.team_id] ? '<img src="' + TEAM_LOGOS[row.team_id] + '" class="team-logo" loading="lazy" onerror="this.style.display=\'none\'">' : '')
+      + escapeHtml(row.team_name) + '</td>'
       + '<td>' + row.Sp + '</td>'
       + '<td>' + row.S  + '</td>'
       + '<td>' + row.U  + '</td>'
