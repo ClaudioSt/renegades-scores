@@ -52,6 +52,12 @@
       border-radius: 6px; padding: 10px 14px; font-size: 1rem; width: 100%; outline: none;
     }
     input[type=number]:focus { border-color: #555; }
+    select {
+      background: #1a1a1a; border: 1px solid #333; color: #f0f0f0;
+      border-radius: 6px; padding: 10px 14px; font-size: 1rem; width: 100%; outline: none;
+      cursor: pointer; appearance: none; -webkit-appearance: none;
+    }
+    select:focus { border-color: #555; }
     .row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; margin-top: 4px; }
     .checkbox-row {
@@ -115,6 +121,12 @@
     <label class="checkbox-row"><input type="checkbox" id="show-title"  checked> Team-Titel</label>
     <label class="checkbox-row"><input type="checkbox" id="compact-mode"> Kompakter Modus</label>
   </div>
+
+  <label>Ansicht</label>
+  <select id="view-input">
+    <option value="spielplan">Spielplan (Standard)</option>
+    <option value="table">Tabelle</option>
+  </select>
 
   <div style="margin-top:24px">
     <button id="generate-btn" type="button">Embed-Code generieren</button>
