@@ -28,6 +28,7 @@ const EVENT_NAME_RE  = /^\d+\.?\s*(Spieltag|Spielrunde)|Spieltag\s*\d+|Turnier|C
 function looksLikeTeamName(name) { return !!name && !EVENT_NAME_RE.test(name); }
 
 const { loadLeagueConfig } = require('./league-config.js');
+const { computeStandings } = require('./standings.js');
 
 async function fetchJSON(url, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -305,7 +306,10 @@ function buildTeams(withGames, teamNameMap) {
   const allTeams = teams.concat(extraTeams).sort((a, b) => a.name.localeCompare(b.name, 'de'));
   console.log('  ' + allTeams.length + ' teams indexed (' + extraTeams.length + ' from passcheck only)');
 
-  const snapshot = { generated: TODAY, teams: allTeams, gamedays: withGames };
+  const standings = computeStandings(leagueConfig, withGames);
+  console.log('Standings computed for ' + Object.keys(standings).length + ' league(s)');
+
+  const snapshot = { generated: TODAY, teams: allTeams, gamedays: withGames, standings };
   const json     = JSON.stringify(snapshot);
   require('fs').writeFileSync('snapshot.json', json, 'utf8');
   const kb = (Buffer.byteLength(json, 'utf8') / 1024).toFixed(1);
