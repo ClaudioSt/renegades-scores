@@ -97,11 +97,13 @@
       color: #555; padding: 8px 6px; border-bottom: 1px solid #333; text-align: right;
     }
     .standings-table th.col-team { text-align: left; }
+    .standings-table th.col-rank { text-align: right; width: 2em; }
     .standings-table td {
       padding: 8px 6px; border-bottom: 1px solid #1c1c1c;
       font-size: 0.85rem; text-align: right; color: #ccc;
     }
     .standings-table td.col-team { text-align: left; font-weight: 600; color: #f0f0f0; }
+    .standings-table td.col-rank { color: #555; font-size: 0.75rem; }
     .standings-row-highlight td { color: var(--accent); font-weight: 700; }
     .standings-row-restricted td { opacity: 0.55; }
     .standings-empty { color: #555; font-size: 0.85rem; padding: 16px 0; }
@@ -724,16 +726,18 @@ function renderStandingsTable(entry, teamIds) {
     return '<div class="standings-empty">Keine Tabellendaten verfügbar.</div>';
   }
   var thead = '<thead><tr>'
+    + '<th class="col-rank">Pl.</th>'
     + '<th class="col-team">Mannschaft</th>'
     + '<th>Sp</th><th>S</th><th>U</th><th>N</th>'
     + '<th>EP</th><th>GP</th><th>PD</th><th>SQ</th>'
     + '</tr></thead>';
   var restricted = entry.promotion_restricted || [];
-  var rows = entry.rows.map(function(row) {
+  var rows = entry.rows.map(function(row, i) {
     var cls = '';
     if (teamIds.indexOf(row.team_id) >= 0) cls += ' standings-row-highlight';
     if (restricted.indexOf(row.team_id) >= 0) cls += ' standings-row-restricted';
     return '<tr class="' + cls.trim() + '">'
+      + '<td class="col-rank">' + (i + 1) + '.</td>'
       + '<td class="col-team">' + escapeHtml(row.team_name) + '</td>'
       + '<td>' + row.Sp + '</td>'
       + '<td>' + row.S  + '</td>'
