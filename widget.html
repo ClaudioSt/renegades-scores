@@ -123,6 +123,15 @@
     .standings-row-highlight td { color: var(--accent); font-weight: 700; }
     .standings-row-restricted td { opacity: 0.55; }
     .standings-empty { color: #555; font-size: 0.85rem; padding: 16px 0; }
+    .year-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .year-tab {
+      background: #222; color: #888; border: 1px solid #333;
+      border-radius: 6px; padding: 6px 16px; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; letter-spacing: 1px;
+    }
+    .year-tab:hover { border-color: #555; color: #ccc; }
+    .year-tab.year-tab-active { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .standings-year-content { /* intentionally empty — structural wrapper only */ }
     .score-box .time { font-size: 0.75rem; color: #888; }
     .score-box .score { font-size: 1.2rem; font-weight: 900; color: #fff; }
     .score-box .score.win  { color: #4caf50; }
@@ -792,6 +801,21 @@ function renderStandingsTable(entry, teamIds) {
   return '<table class="standings-table">' + thead + '<tbody>' + rows + '</tbody></table>';
 }
 
+// Module-level state for year switching (set by renderTableView)
+var _standingsAllEntries = [];
+var _standingsTeams = [];
+var _standingsRoot = null;
+
+function _renderStandingsForYear(allEntries, year, teams) {
+  var entries = allEntries.filter(function(e) { return e.year === year; });
+  var html = '';
+  entries.forEach(function(e) {
+    html += '<div class="standings-league-title">' + escapeHtml(e.entry.name) + '</div>';
+    html += renderStandingsTable(e.entry, teams);
+  });
+  return html || '<div class="standings-empty">Keine Tabellendaten für ' + escapeHtml(String(year)) + '.</div>';
+}
+
 async function renderTableView(root, cfg) {
   root.innerHTML = '<div class="loading">Lade Tabelle…</div>';
   var snap = await loadSnapshot();
@@ -828,16 +852,44 @@ async function renderTableView(root, cfg) {
   activeYears.sort(function(a, b) { return b - a; });
   var defaultYear = activeYears[0];
 
-  // Render tables for default year
-  var entriesForYear = allEntries.filter(function(e) { return e.year === defaultYear; });
-  var html = '<div class="standings-wrapper">';
-  entriesForYear.forEach(function(e) {
-    html += '<div class="standings-league-title">' + escapeHtml(e.entry.name) + '</div>';
-    html += renderStandingsTable(e.entry, cfg.teams);
-  });
-  html += '</div>';
+  // Build year tabs HTML (only when multiple years)
+  var tabsHtml = '';
+  if (activeYears.length > 1) {
+    tabsHtml = '<div class="year-tabs" id="standings-year-tabs">'
+      + activeYears.map(function(y) {
+          var active = y === defaultYear ? ' year-tab-active' : '';
+          return '<button class="year-tab' + active + '" data-year="' + y + '">' + y + '</button>';
+        }).join('')
+      + '</div>';
+  }
 
-  root.innerHTML = html;
+  var contentHtml = _renderStandingsForYear(allEntries, defaultYear, cfg.teams);
+
+  root.innerHTML = '<div class="standings-wrapper">'
+    + tabsHtml
+    + '<div class="standings-year-content">' + contentHtml + '</div>'
+    + '</div>';
+
+  _standingsAllEntries = allEntries;
+  _standingsTeams = cfg.teams;
+  _standingsRoot = root;
+
+  root.addEventListener('click', function(e) {
+    var btn = e.target.closest('.year-tab');
+    if (!btn || !_standingsRoot) return;
+    var year = parseInt(btn.getAttribute('data-year'), 10);
+
+    // Update active tab styling
+    _standingsRoot.querySelectorAll('.year-tab').forEach(function(b) {
+      b.classList.toggle('year-tab-active', parseInt(b.getAttribute('data-year'), 10) === year);
+    });
+
+    // Re-render content for selected year (tabs wrapper stays, only content swapped)
+    var contentEl = _standingsRoot.querySelector('.standings-year-content');
+    if (contentEl) {
+      contentEl.innerHTML = _renderStandingsForYear(_standingsAllEntries, year, _standingsTeams);
+    }
+  });
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
