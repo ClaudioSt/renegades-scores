@@ -481,7 +481,7 @@ function renderGamedayCard(gd, games, teamId, showScore) {
   if (teamGames.length === 0) return '';
 
   var rows   = teamGames.slice().sort(function(a,b) {
-    return (b.scheduled || '').localeCompare(a.scheduled || '');
+    return (a.scheduled || '').localeCompare(b.scheduled || '');
   }).map(function(g) { return renderGameRow(g, teamId, showScore); }).join('');
   var name   = escapeHtml(gd.name);
   var date   = escapeHtml(formatDate(gd.date));
