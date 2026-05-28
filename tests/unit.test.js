@@ -909,3 +909,74 @@ describe('findNextGame', () => {
     assert.equal(result.game.id, game1.id);
   });
 });
+
+// ─── renderNextGameCard ────────────────────────────────────────────────────────
+
+describe('renderNextGameCard', () => {
+  let w;
+  beforeEach(() => { w = freshContext(); });
+
+  const mkGame = (overrides) => Object.assign({
+    scheduled: '2026-06-15T14:30:00Z',
+    results: [
+      { team_id: 159, team_name: 'Nürnberg Renegades', isHome: true },
+      { team_id: 200, team_name: 'Opponent FC', isHome: false },
+    ],
+    status: 'upcoming',
+  }, overrides);
+
+  const mkGd = (overrides) => Object.assign({
+    id: 1, date: '2026-06-15', name: 'Bundesliga Spieltag 5',
+  }, overrides);
+
+  it('returns empty string when team result not found (me missing)', () => {
+    const game = mkGame({ results: [{ team_id: 200, team_name: 'Only', isHome: true }] });
+    assert.equal(w.renderNextGameCard(mkGd(), game, 159), '');
+  });
+
+  it('returns empty string when opponent result not found (other missing)', () => {
+    const game = mkGame({ results: [{ team_id: 159, team_name: 'Solo', isHome: true }] });
+    assert.equal(w.renderNextGameCard(mkGd(), game, 159), '');
+  });
+
+  it('home game → output includes "Heimspiel"', () => {
+    const html = w.renderNextGameCard(mkGd(), mkGame(), 159);
+    assert.ok(html.includes('Heimspiel'));
+  });
+
+  it('away game → output includes "Auswärtsspiel"', () => {
+    const game = mkGame({ results: [
+      { team_id: 159, team_name: 'Renegades', isHome: false },
+      { team_id: 200, team_name: 'Opponent', isHome: true },
+    ]});
+    const html = w.renderNextGameCard(mkGd(), game, 159);
+    assert.ok(html.includes('Auswärtsspiel'));
+  });
+
+  it('gd.name appears in output', () => {
+    const html = w.renderNextGameCard(mkGd({ name: 'Finale Nord' }), mkGame(), 159);
+    assert.ok(html.includes('Finale Nord'));
+  });
+
+  it('opponent team_name appears in output', () => {
+    const html = w.renderNextGameCard(mkGd(), mkGame(), 159);
+    assert.ok(html.includes('Opponent FC'));
+  });
+
+  it('time extracted from game.scheduled — "14:30 Uhr" visible', () => {
+    const html = w.renderNextGameCard(mkGd(), mkGame(), 159);
+    assert.ok(html.includes('14:30 Uhr'));
+  });
+
+  it('output contains class next-game-highlight', () => {
+    const html = w.renderNextGameCard(mkGd(), mkGame(), 159);
+    assert.ok(html.includes('next-game-highlight'));
+  });
+
+  it('null scheduled field → no crash, no Uhr in output', () => {
+    const game = mkGame({ scheduled: null });
+    const html = w.renderNextGameCard(mkGd(), game, 159);
+    assert.ok(typeof html === 'string' && html.length > 0, 'must return non-empty string');
+    assert.ok(!html.includes('Uhr'), 'no time should appear when scheduled is null');
+  });
+});
