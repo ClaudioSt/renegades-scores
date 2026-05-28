@@ -42,24 +42,6 @@
       font-weight: 700; font-size: 0.8rem; padding: 8px 14px;
       border-radius: 6px; white-space: nowrap;
     }
-    .next-game-highlight {
-      border: 2px solid var(--accent);
-      border-radius: 6px;
-      padding: 10px 14px;
-      margin-bottom: 10px;
-      background: rgba(0,0,0,0.04);
-    }
-    .next-game-label {
-      font-size: 0.7rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      color: var(--accent);
-      margin-bottom: 4px;
-    }
-    .next-game-date { font-size: 0.85rem; color: #aaa; margin-bottom: 2px; }
-    .next-game-name { font-weight: 600; margin-bottom: 2px; }
-    .next-game-opponent { font-size: 0.9rem; }
     .gameday-card {
       background: #1a1a1a; border: 1px solid #2a2a2a;
       border-radius: 10px; margin-bottom: 16px; overflow: hidden;
@@ -519,23 +501,7 @@ function renderGamedayCard(gd, games, teamId, showScore) {
     + '</div>';
 }
 
-function renderNextGameCard(gd, game, teamId) {
-  var me    = game.results.find(function(r) { return r.team_id === teamId; });
-  var other = game.results.find(function(r) { return r.team_id !== teamId; });
-  if (!me || !other) return '';
-  var time = '';
-  if (game.scheduled) {
-    var t = game.scheduled.slice(11, 16);
-    if (t) time = ' · ' + t + ' Uhr';
-  }
-  var location = me.isHome ? 'Heimspiel' : 'Auswärtsspiel';
-  return '<div class="next-game-highlight">'
-    + '<div class="next-game-label">Nächstes Spiel</div>'
-    + '<div class="next-game-date">' + escapeHtml(formatDate(gd.date)) + time + '</div>'
-    + '<div class="next-game-name">' + escapeHtml(gd.name) + '</div>'
-    + '<div class="next-game-opponent">' + escapeHtml(location) + ' · ' + escapeHtml(other.team_name) + '</div>'
-    + '</div>';
-}
+
 
 function resolveTeamAbbrev(teamId, entries) {
   for (var i = 0; i < entries.length; i++) {
@@ -682,47 +648,28 @@ async function loadTeam(teamId, els, cfg) {
       .filter(function(e) { return classifyGameday(e.gd, e.games, teamId, today) === 'active'; })
       .sort(function(a,b) { return a.gd.date.localeCompare(b.gd.date); });
     if (cfg.future > 0) futureEntries = futureEntries.slice(0, cfg.future);
-    var nextResult = findNextGame(futureEntries, teamId, today);
-    var highlightHtml = nextResult ? renderNextGameCard(nextResult.gd, nextResult.game, teamId) : '';
-    els.future.innerHTML = highlightHtml + (futureEntries.length
+    els.future.innerHTML = futureEntries.length
       ? futureEntries.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, false); }).join('')
-      : '<div class="no-data">Keine kommenden Spieltage geplant.</div>');
+      : '<div class="no-data">Keine kommenden Spieltage geplant.</div>';
   }
 }
 
 function renderPastSection(pastSorted, teamId, visibleCount) {
   if (!pastSorted.length) return '';
   var shown = pastSorted.slice(0, visibleCount);
-  var html  = shown.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('');
   var remaining = pastSorted.length - visibleCount;
-  if (remaining > 0) {
-    html += '<button class="load-more" data-team="' + teamId + '" data-visible="' + visibleCount + '">'
+  var buttonHtml = remaining > 0
+    ? '<button class="load-more" data-team="' + teamId + '" data-visible="' + visibleCount + '">'
       + 'Weitere laden (' + remaining + ')'
-      + '</button>';
-  }
-  return html;
+      + '</button>'
+    : '';
+  // Show oldest-visible first so newest past game is adjacent to upcoming games
+  var html = shown.slice().reverse().map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('');
+  return buttonHtml + html;
 }
 
 // ── VIEW RENDERERS ───────────────────────────────────────────────────────────
 
-var findNextGame = function(activeEntries, teamId, today) {
-  var qualifying = activeEntries.filter(function(entry) {
-    return entry.gd.date >= today;
-  });
-  qualifying.sort(function(a, b) {
-    return a.gd.date < b.gd.date ? -1 : a.gd.date > b.gd.date ? 1 : 0;
-  });
-  for (var i = 0; i < qualifying.length; i++) {
-    var entry = qualifying[i];
-    for (var j = 0; j < entry.games.length; j++) {
-      var game = entry.games[j];
-      if (game.status === 'final') continue;
-      var hasTeam = game.results.some(function(r) { return r.team_id === teamId; });
-      if (hasTeam) return { gd: entry.gd, game: game };
-    }
-  }
-  return null;
-};
 
 async function renderSpielplan(root, cfg) {
   var elMap = {};
