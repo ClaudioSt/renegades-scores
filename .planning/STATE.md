@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-05-27)
 
 **Core value:** Existing embeds on external sites must never break — backwards compatibility is non-negotiable.
-**Current focus:** Phase 5 complete — ready for Phase 6 (Generator Update)
+**Current focus:** Phase 6 complete — ready for Phase 7 (Polish & Hardening)
 
 ## Current Position
 
-Phase: 5 of 7 (Table View)
-Plan: 3 of 3 in current phase
+Phase: 6 of 7 (Generator Update)
+Plan: 2 of 2 in current phase
 Status: Phase complete
-Last activity: 2026-05-28 — Completed Phase 5 (05-01, 05-02, 05-03 via parallel execution)
+Last activity: 2026-05-28 — Completed Phase 6 (06-01, 06-02 via sequential subagent execution)
 
-Progress: ████████░░ 93% (14/15 plans complete)
+Progress: ████████░░ 84% (16/19 plans complete)
 
 ## Performance Metrics
 
@@ -64,8 +64,13 @@ User should manually verify in browser:
 - "Weitere laden" button works (widget.html?t=159&past=2)
 - Next-game highlight card appears (widget.html?t=159)
 
+Phase 6 human-verify checkpoint (06-02) was skipped due to skip_checkpoints=true.
+User should manually verify in browser (generator.html):
+- Spielplan selection → generated embed URL does NOT contain view=
+- Tabelle selection → generated embed URL contains &view=table
+
 ## Session Continuity
 
 Last session: 2026-05-28
-Stopped at: Completed Phase 5 via parallel execution (05-01 → 05-02 + 05-03 parallel)
+Stopped at: Completed Phase 6 via sequential subagent execution (06-01 → 06-02)
 Resume file: None

@@ -20,8 +20,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Spielplan Enhancements** - "Weitere laden" pagination (3 past gamedays/click) and next-game highlight card
 - [x] **Phase 3: League Config** - Create `league-config.json` mapping gameday IDs to phase names per league+season
 - [x] **Phase 4: Snapshot Extension** - Extend `_gen_snapshot.js` to compute standings blocks and tag gamedays with phases
-- [ ] **Phase 5: Table View** - `view=table` rendering: standings per phase, phase selector, current team highlighted
-- [ ] **Phase 6: Generator Update** - Add `view=` selector to `generator.html` embed code tool
+- [x] **Phase 5: Table View** - `view=table` rendering: standings per phase, phase selector, current team highlighted
+- [x] **Phase 6: Generator Update** - Add `view=` selector to `generator.html` embed code tool
 - [ ] **Phase 7: Polish & Hardening** - Security audit on new code paths, test coverage for new views, cross-browser check
 
 ## Phase Details
@@ -113,5 +113,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. League Config | 2/2 | Complete | 2026-05-27 |
 | 4. Snapshot Extension | 3/3 | Complete | 2026-05-28 |
 | 5. Table View | 3/3 | Complete | 2026-05-28 |
-| 6. Generator Update | 0/TBD | Not started | - |
+| 6. Generator Update | 2/2 | Complete | 2026-05-28 |
 | 7. Polish & Hardening | 0/TBD | Not started | - |
