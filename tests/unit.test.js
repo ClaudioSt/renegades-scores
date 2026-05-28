@@ -980,3 +980,75 @@ describe('renderNextGameCard', () => {
     assert.ok(!html.includes('Uhr'), 'no time should appear when scheduled is null');
   });
 });
+
+// ─── _renderStandingsForYear ───────────────────────────────────────────────────
+
+describe('_renderStandingsForYear', () => {
+  let w;
+  beforeEach(() => { w = freshContext(); });
+
+  const mkEntry = (year, name, rows) => ({
+    leagueKey: 'dffl', seasonKey: String(year),
+    year,
+    entry: { name, rows: rows || [], promotion_restricted: [] },
+  });
+
+  const mkRow = (overrides) => Object.assign({
+    team_id: 159, team_name: 'Renegades',
+    Sp: 6, S: 4, U: 1, N: 1, EP: 13, GP: 9, PD: 42, SQ: 0.9167,
+  }, overrides);
+
+  it('empty allEntries → returns standings-empty div containing the year', () => {
+    const html = w._renderStandingsForYear([], 2026, []);
+    assert.ok(html.includes('standings-empty'), 'must include standings-empty class');
+    assert.ok(html.includes('2026'), 'year must appear in empty state message');
+  });
+
+  it('no entries matching given year → returns standings-empty div', () => {
+    const entries = [mkEntry(2025, 'League 2025', [mkRow()])];
+    const html = w._renderStandingsForYear(entries, 2026, []);
+    assert.ok(html.includes('standings-empty'));
+    assert.ok(!html.includes('League 2025'), 'wrong-year entry must not appear');
+  });
+
+  it('single matching entry → contains league title div and table', () => {
+    const entries = [mkEntry(2026, 'DKB DFFL 2026', [mkRow()])];
+    const html = w._renderStandingsForYear(entries, 2026, []);
+    assert.ok(html.includes('DKB DFFL 2026'), 'league name must appear');
+    assert.ok(html.includes('<table'), 'standings table must be present');
+  });
+
+  it('multiple entries for same year → both league titles and tables rendered', () => {
+    const entries = [
+      mkEntry(2026, 'League A', [mkRow()]),
+      mkEntry(2026, 'League B', [mkRow({ team_id: 200, team_name: 'Other' })]),
+    ];
+    const html = w._renderStandingsForYear(entries, 2026, []);
+    assert.ok(html.includes('League A'), 'first league must appear');
+    assert.ok(html.includes('League B'), 'second league must appear');
+  });
+
+  it('entries from other years are excluded', () => {
+    const entries = [
+      mkEntry(2025, 'Old League', [mkRow()]),
+      mkEntry(2026, 'New League', [mkRow()]),
+    ];
+    const html = w._renderStandingsForYear(entries, 2026, []);
+    assert.ok(html.includes('New League'), 'current year entry must appear');
+    assert.ok(!html.includes('Old League'), 'past year entry must be excluded');
+  });
+
+  it('XSS in entry.name is escaped', () => {
+    const payload = '<script>alert(1)</script>';
+    const entries = [mkEntry(2026, payload, [mkRow()])];
+    const html = w._renderStandingsForYear(entries, 2026, []);
+    assert.ok(!html.includes('<script>'), 'script tag must not appear unescaped');
+    assert.ok(html.includes('&lt;script&gt;'), 'script tag must be HTML-escaped');
+  });
+
+  it('teams array passed correctly — highlighted team row has standings-row-highlight class', () => {
+    const entries = [mkEntry(2026, 'DKB DFFL', [mkRow({ team_id: 159 })])];
+    const html = w._renderStandingsForYear(entries, 2026, [159]);
+    assert.ok(html.includes('standings-row-highlight'), 'highlight class must appear for team in teams array');
+  });
+});
