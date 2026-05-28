@@ -739,6 +739,100 @@ describe('renderPastSection', () => {
   });
 });
 
+// ─── renderStandingsTable ─────────────────────────────────────────────────────
+
+describe('renderStandingsTable', () => {
+  let w;
+  beforeEach(() => { w = freshContext(); });
+
+  const mkRow = (overrides) => Object.assign({
+    team_id: 159, team_name: 'Nürnberg Renegades',
+    Sp: 6, S: 4, U: 1, N: 1, EP: 13, GP: 9, PD: 42, SQ: 0.9167,
+  }, overrides);
+
+  const mkEntry = (rows, promotion_restricted) => ({
+    name: 'DKB DFFL 2026',
+    rows: rows || [],
+    promotion_restricted: promotion_restricted || [],
+  });
+
+  it('empty rows → returns div with "Keine Tabellendaten" text', () => {
+    const html = w.renderStandingsTable(mkEntry([]), []);
+    assert.ok(html.includes('Keine Tabellendaten'));
+    assert.ok(!html.includes('<table'));
+  });
+
+  it('non-empty rows → returns <table> element', () => {
+    const html = w.renderStandingsTable(mkEntry([mkRow()]), []);
+    assert.ok(html.includes('<table'));
+  });
+
+  it('column headers present: Mannschaft, Sp, S, U, N, EP, GP, PD, SQ', () => {
+    const html = w.renderStandingsTable(mkEntry([mkRow()]), []);
+    assert.ok(html.includes('Mannschaft'));
+    assert.ok(html.includes('<th>Sp</th>'));
+    assert.ok(html.includes('<th>S</th>'));
+    assert.ok(html.includes('<th>U</th>'));
+    assert.ok(html.includes('<th>N</th>'));
+    assert.ok(html.includes('<th>EP</th>'));
+    assert.ok(html.includes('<th>GP</th>'));
+    assert.ok(html.includes('<th>PD</th>'));
+    assert.ok(html.includes('<th>SQ</th>'));
+  });
+
+  it('row count matches entry.rows.length', () => {
+    const rows = [mkRow({ team_id: 159 }), mkRow({ team_id: 200, team_name: 'Other' }), mkRow({ team_id: 300, team_name: 'Third' })];
+    const html = w.renderStandingsTable(mkEntry(rows), []);
+    assert.equal((html.match(/<tr/g) || []).length - 1, 3); // subtract header row
+  });
+
+  it('team_name appears in rendered HTML', () => {
+    const html = w.renderStandingsTable(mkEntry([mkRow({ team_name: 'Nürnberg Renegades' })]), []);
+    assert.ok(html.includes('Nürnberg Renegades'));
+  });
+
+  it('team ID in teamIds → row has class standings-row-highlight', () => {
+    const html = w.renderStandingsTable(mkEntry([mkRow({ team_id: 159 })]), [159]);
+    assert.ok(html.includes('standings-row-highlight'));
+  });
+
+  it('team ID NOT in teamIds → row does NOT have class standings-row-highlight', () => {
+    const html = w.renderStandingsTable(mkEntry([mkRow({ team_id: 159 })]), [287]);
+    assert.ok(!html.includes('standings-row-highlight'));
+  });
+
+  it('team in promotion_restricted → row has class standings-row-restricted', () => {
+    const html = w.renderStandingsTable(mkEntry([mkRow({ team_id: 159 })], [159]), []);
+    assert.ok(html.includes('standings-row-restricted'));
+  });
+
+  it('team NOT in promotion_restricted → row does NOT have class standings-row-restricted', () => {
+    const html = w.renderStandingsTable(mkEntry([mkRow({ team_id: 159 })], [287]), []);
+    assert.ok(!html.includes('standings-row-restricted'));
+  });
+
+  it('SQ value displayed with 4 decimal places (0.9167 → "0.9167")', () => {
+    const html = w.renderStandingsTable(mkEntry([mkRow({ SQ: 0.9167 })]), []);
+    assert.ok(html.includes('0.9167'));
+  });
+
+  it('XSS: team_name containing <script>alert(1)</script> is escaped', () => {
+    const xssPayload = '<script>alert(1)</script>';
+    const html = w.renderStandingsTable(mkEntry([mkRow({ team_name: xssPayload })]), []);
+    assert.ok(!html.includes('<script>'));
+    assert.ok(!html.includes('</script>'));
+    assert.ok(html.includes('&lt;script&gt;'));
+  });
+
+  it('XSS: team_name containing "><svg onload=alert(1)> is escaped', () => {
+    const xssPayload = '"><svg onload=alert(1)>';
+    const html = w.renderStandingsTable(mkEntry([mkRow({ team_name: xssPayload })]), []);
+    assert.ok(!html.includes('<svg'));
+    assert.ok(!html.includes('"><svg'));
+    assert.ok(html.includes('&lt;svg'));
+  });
+});
+
 // ─── findNextGame ─────────────────────────────────────────────────────────────
 
 describe('findNextGame', () => {
