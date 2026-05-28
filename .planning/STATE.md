@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-05-27)
 
 **Core value:** Existing embeds on external sites must never break — backwards compatibility is non-negotiable.
-**Current focus:** Phase 4 complete — ready for Phase 5 (Table View)
+**Current focus:** Phase 5 complete — ready for Phase 6 (Generator Update)
 
 ## Current Position
 
-Phase: 4 of 7 (Snapshot Extension)
+Phase: 5 of 7 (Table View)
 Plan: 3 of 3 in current phase
 Status: Phase complete
-Last activity: 2026-05-28 — Completed 04-03-PLAN.md
+Last activity: 2026-05-28 — Completed Phase 5 (05-01, 05-02, 05-03 via parallel execution)
 
-Progress: ███████░░░ 79% (11/14 plans complete)
+Progress: ████████░░ 93% (14/15 plans complete)
 
 ## Performance Metrics
 
@@ -67,5 +67,5 @@ User should manually verify in browser:
 ## Session Continuity
 
 Last session: 2026-05-28
-Stopped at: Completed 04-03-PLAN.md (Phase 4 complete)
+Stopped at: Completed Phase 5 via parallel execution (05-01 → 05-02 + 05-03 parallel)
 Resume file: None

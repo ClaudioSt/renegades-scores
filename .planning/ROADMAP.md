@@ -76,10 +76,9 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 05-01: Table view renderer — standings table layout with W/L/PF/PA columns
-- [ ] 05-02: Phase selector (tabs or dropdown) — filter standings to selected phase
-- [ ] 05-03: Highlight current team row; handle multi-team param (highlight all matching teams)
-- [ ] 05-04: Tests for table rendering, phase filtering, team highlighting
+- [x] 05-01: Core table renderer — `renderStandingsTable` + async `renderTableView` with CSS
+- [x] 05-02: Year selector — interactive year tabs, click delegation, content swap without snapshot reload
+- [x] 05-03: TDD — 12 tests for `renderStandingsTable` (highlights, XSS, SQ formatting, empty state)
 
 ### Phase 6: Generator Update
 **Goal**: `generator.html` embed code builder exposes `view=` selector; generated embed URLs include view param
@@ -113,6 +112,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Spielplan Enhancements | 4/4 | Complete | 2026-05-27 |
 | 3. League Config | 2/2 | Complete | 2026-05-27 |
 | 4. Snapshot Extension | 3/3 | Complete | 2026-05-28 |
-| 5. Table View | 0/TBD | Not started | - |
+| 5. Table View | 3/3 | Complete | 2026-05-28 |
 | 6. Generator Update | 0/TBD | Not started | - |
 | 7. Polish & Hardening | 0/TBD | Not started | - |
