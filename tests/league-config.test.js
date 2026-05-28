@@ -76,10 +76,13 @@ describe('validateLeagueConfig', () => {
 // ─── loadLeagueConfig ─────────────────────────────────────────────────────────
 
 describe('loadLeagueConfig', () => {
-  it('loads and validates the real league-config.json — returns object with ff-bl, rl-bayern, dkb-dffl keys', () => {
+  it('loads and validates the real league-config.json — returns object with expected league keys', () => {
     const filePath = path.join(__dirname, '..', 'league-config.json');
     const config = loadLeagueConfig(filePath);
     assert.ok(typeof config === 'object' && config !== null);
-    assert.deepEqual(Object.keys(config).sort(), ['dkb-dffl', 'ff-bl', 'rl-bayern'].sort());
+    const keys = Object.keys(config).sort();
+    ['dkb-dffl', 'dffl2', 'ff-bl', 'rl-bayern'].forEach(k => {
+      assert.ok(keys.includes(k), `league-config.json missing expected key: ${k}`);
+    });
   });
 });

@@ -755,8 +755,12 @@ var _standingsRoot = null;
 
 function _renderStandingsForYear(allEntries, year, teams) {
   var entries = allEntries.filter(function(e) { return e.year === year; });
+  var teamEntries = entries.filter(function(e) {
+    return e.entry.rows.some(function(r) { return teams.indexOf(r.team_id) >= 0; });
+  });
+  var toRender = teamEntries.length > 0 ? teamEntries : entries;
   var html = '';
-  entries.forEach(function(e) {
+  toRender.forEach(function(e) {
     html += '<div class="standings-league-title">' + escapeHtml(e.entry.name) + '</div>';
     html += renderStandingsTable(e.entry, teams);
   });

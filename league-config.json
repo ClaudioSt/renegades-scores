@@ -13,10 +13,17 @@
       "promotion_restricted": []
     }
   },
+  "dffl2": {
+    "2026": {
+      "name": "DKB DFFL2 2026",
+      "gameday_ids": [649, 650, 651, 652, 653, 654, 655, 656, 657, 658, 659, 660, 661, 662, 663, 664, 665, 666, 667, 668],
+      "promotion_restricted": []
+    }
+  },
   "dkb-dffl": {
     "2026": {
       "name": "DKB DFFL 2026",
-      "gameday_ids": [],
+      "gameday_ids": [632, 633, 634, 635, 636, 637, 638, 639, 641, 642, 643, 644, 645, 646, 647, 648],
       "promotion_restricted": []
     }
   }
