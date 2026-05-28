@@ -9,7 +9,7 @@
   "rl-bayern": {
     "2026": {
       "name": "RL Bayern 2026",
-      "gameday_ids": [],
+      "gameday_ids": [691, 693, 694, 695, 696, 697, 698, 699],
       "promotion_restricted": []
     }
   },
