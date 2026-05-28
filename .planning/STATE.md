@@ -5,16 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-05-27)
 
 **Core value:** Existing embeds on external sites must never break — backwards compatibility is non-negotiable.
-**Current focus:** Phase 3 complete — ready for Phase 4 (Snapshot Extension)
+**Current focus:** Phase 4 complete — ready for Phase 5 (Table View)
 
 ## Current Position
 
-Phase: 3 of 7 (League Config)
-Plan: 2 of 2 in current phase
+Phase: 4 of 7 (Snapshot Extension)
+Plan: 3 of 3 in current phase
 Status: Phase complete
-Last activity: 2026-05-27 — Completed 03-02-PLAN.md
+Last activity: 2026-05-28 — Completed 04-03-PLAN.md
 
-Progress: █████░░░░░ 57% (8/14 plans complete)
+Progress: ███████░░░ 79% (11/14 plans complete)
 
 ## Performance Metrics
 
@@ -30,6 +30,7 @@ Progress: █████░░░░░ 57% (8/14 plans complete)
 | Phase 1 | 2 | ~4 min | ~2 min |
 | Phase 2 | 4 | ~4 min | ~1 min |
 | Phase 3 | 2 | ~3 min | ~1.5 min |
+| Phase 4 | 3 | ~30 min | ~10 min (incl. rebuild) |
 
 **Recent Trend:**
 - Last 4 plans: 02-03 (TDD), 02-04 (execute), 03-01 (execute), 03-02 (TDD)
@@ -65,6 +66,6 @@ User should manually verify in browser:
 
 ## Session Continuity
 
-Last session: 2026-05-27
-Stopped at: Completed 03-02-PLAN.md (Phase 3 complete)
+Last session: 2026-05-28
+Stopped at: Completed 04-03-PLAN.md (Phase 4 complete)
 Resume file: None

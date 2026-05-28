@@ -19,7 +19,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: URL Routing & View Dispatch** - Add `view=` param, wire dispatch to spielplan/table render paths, keep backwards compat
 - [x] **Phase 2: Spielplan Enhancements** - "Weitere laden" pagination (3 past gamedays/click) and next-game highlight card
 - [x] **Phase 3: League Config** - Create `league-config.json` mapping gameday IDs to phase names per league+season
-- [ ] **Phase 4: Snapshot Extension** - Extend `_gen_snapshot.js` to compute standings blocks and tag gamedays with phases
+- [x] **Phase 4: Snapshot Extension** - Extend `_gen_snapshot.js` to compute standings blocks and tag gamedays with phases
 - [ ] **Phase 5: Table View** - `view=table` rendering: standings per phase, phase selector, current team highlighted
 - [ ] **Phase 6: Generator Update** - Add `view=` selector to `generator.html` embed code tool
 - [ ] **Phase 7: Polish & Hardening** - Security audit on new code paths, test coverage for new views, cross-browser check
@@ -65,9 +65,9 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 04-01: Extend `_gen_snapshot.js` to tag each gameday with its phase name from league-config
-- [ ] 04-02: Compute standings (W/L/PF/PA) per phase per league from game results; add `standings` block to snapshot
-- [ ] 04-03: Tests for standings computation correctness and schema validation
+- [x] 04-01: Extend `_gen_snapshot.js` to tag each gameday with its phase name from league-config
+- [x] 04-02: Compute standings (W/L/PF/PA) per phase per league from game results; add `standings` block to snapshot
+- [x] 04-03: Tests for standings computation correctness and schema validation
 
 ### Phase 5: Table View
 **Goal**: `view=table` renders league standings table with phase selector; current team row highlighted
@@ -112,7 +112,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. URL Routing & View Dispatch | 2/2 | Complete | 2026-05-27 |
 | 2. Spielplan Enhancements | 4/4 | Complete | 2026-05-27 |
 | 3. League Config | 2/2 | Complete | 2026-05-27 |
-| 4. Snapshot Extension | 0/TBD | Not started | - |
+| 4. Snapshot Extension | 3/3 | Complete | 2026-05-28 |
 | 5. Table View | 0/TBD | Not started | - |
 | 6. Generator Update | 0/TBD | Not started | - |
 | 7. Polish & Hardening | 0/TBD | Not started | - |
