@@ -352,6 +352,7 @@ document.getElementById('generate-btn').addEventListener('click', function() {
   var showFuture  = document.getElementById('show-future').checked;
   var showTitle   = document.getElementById('show-title').checked;
   var compact     = document.getElementById('compact-mode').checked;
+  var view        = document.getElementById('view-input').value;
 
   var base   = window.location.href.replace('generator.html', 'widget.html');
   var params = teams.map(function(t) { return 't=' + t; }).join('&') + '&color=' + color;
@@ -361,6 +362,7 @@ document.getElementById('generate-btn').addEventListener('click', function() {
   if (!showFuture)       params += '&show_future=0';
   if (!showTitle)        params += '&title=0';
   if (compact)           params += '&compact=1';
+  if (view !== 'spielplan') params += '&view=' + view;
   var src    = base + '?' + params;
 
   var listenerCode = '<script>'
