@@ -489,7 +489,7 @@ function renderGamedayCard(gd, games, teamId, showScore) {
   var league = escapeHtml(gd.league_display || '');
   var addrRaw = (gd.address || '').trim();
   var skipAddr = !addrRaw || ['tba','tbd','adresse folgt'].some(function(s) { return addrRaw.toLowerCase().startsWith(s); });
-  var addr   = skipAddr ? '' : '<span>📍 ' + escapeHtml(addrRaw.split(',')[0]) + '</span>';
+  var addr   = skipAddr ? '' : '<span>' + escapeHtml(addrRaw.split(',')[0]) + '</span>';
 
   return '<div class="gameday-card">'
     + '<div class="gameday-header">'
