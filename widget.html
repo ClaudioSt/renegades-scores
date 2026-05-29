@@ -781,12 +781,10 @@ async function renderSpielplan(root, cfg) {
       (cfg.showTitle ? '<div class="team-title" id="t-title-' + teamId + '"></div>' : '')
       + '<div id="t-live-' + teamId + '"></div>'
       + (cfg.showFuture
-          ? '<div class="section-title">Kommende Spieltage</div>'
-            + '<div id="t-future-' + teamId + '"><div class="loading">Lade Daten…</div></div>'
+          ? '<div id="t-future-' + teamId + '"><div class="loading">Lade Daten…</div></div>'
           : '')
       + (cfg.showPast
-          ? '<div class="section-title">Vergangene Spieltage</div>'
-            + '<div id="t-past-' + teamId + '"><div class="loading">Lade Daten…</div></div>'
+          ? '<div id="t-past-' + teamId + '"><div class="loading">Lade Daten…</div></div>'
           : '');
     root.appendChild(block);
     elMap[teamId] = {
