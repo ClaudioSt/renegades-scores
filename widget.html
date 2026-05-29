@@ -20,10 +20,6 @@
       font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: 3px; color: #888; margin: 24px 0 12px 0;
     }
-    .progress-wrap { margin: 12px 0; }
-    .progress-bar-bg { background: #222; border-radius: 4px; height: 6px; overflow: hidden; }
-    .progress-bar-fg { background: var(--accent); height: 6px; border-radius: 4px; transition: width 0.2s ease; }
-    .progress-label { font-size: 0.75rem; color: #666; margin-top: 6px; }
     .live-banner {
       background: #ff0000; color: #fff; border-radius: 8px;
       padding: 16px 20px; margin-bottom: 12px;
@@ -468,13 +464,6 @@ async function discoverNewGamedays(teamId, knownIds, onProgress) {
 }
 
 // ── RENDER ───────────────────────────────────────────────────────────────────
-function renderProgress(done, total) {
-  var pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  return '<div class="progress-wrap">'
-    + '<div class="progress-bar-bg"><div class="progress-bar-fg" style="width:' + pct + '%"></div></div>'
-    + '<div class="progress-label">Erkenne Spieltage… ' + done + ' / ' + total + '</div>'
-    + '</div>';
-}
 
 function renderLiveBanner(game, gd, teamId) {
   var home = game.results.find(function(r) { return r.isHome; });
@@ -643,11 +632,7 @@ async function loadTeam(teamId, els, cfg) {
       .concat(cache && cache.active_ids ? cache.active_ids : [])
     );
 
-    if (els.future && !els.future.firstChild) els.future.innerHTML = renderProgress(0, 1);
-
-    var newEntries = await discoverNewGamedays(teamId, knownIds, function(done, total) {
-      if (els.future) els.future.innerHTML = renderProgress(done, total);
-    });
+    var newEntries = await discoverNewGamedays(teamId, knownIds);
 
     if (!cache) cache = { past: [], active_ids: [] };
 
