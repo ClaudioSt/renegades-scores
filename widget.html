@@ -261,6 +261,12 @@ function escapeHtml(str) {
     .replace(/'/g, '&#39;');
 }
 
+function fingerprintGames(games) {
+  return (games || []).map(function(g) {
+    return g.id + ':' + g.status + ':' + (g.final_score || '') + ':' + (g.halftime_score || '');
+  }).sort().join('|');
+}
+
 // ── UTILS ────────────────────────────────────────────────────────────────────
 function formatDate(dateStr) {
   var d = new Date(dateStr + 'T00:00:00');
@@ -673,11 +679,14 @@ async function loadTeam(teamId, els, cfg) {
 
   // Promote completed active gamedays to permanent past cache
   var newActiveIds = [];
+  var pastChanged = false;
   activeEntries.forEach(function(e) {
     var cls = classifyGameday(e.gd, e.games, teamId, today);
     if (cls === 'past') {
-      if (!cache.past.some(function(p) { return p.id === e.id; }))
+      if (!cache.past.some(function(p) { return p.id === e.id; })) {
         cache.past.push({ id: e.id, gd: e.gd, games: e.games });
+        pastChanged = true;
+      }
     } else {
       newActiveIds.push(e.id);
     }
@@ -705,8 +714,8 @@ async function loadTeam(teamId, els, cfg) {
     els.live.innerHTML = '';
   }
 
-  // Past section
-  if (els.past) {
+  // Past section — only re-render if a gameday was newly promoted from active
+  if (els.past && pastChanged) {
     var pastSorted = cache.past.slice().sort(function(a,b) { return b.gd.date.localeCompare(a.gd.date); });
     if (!pastSorted.length) {
       els.past.innerHTML = '<div class="no-data">Keine vergangenen Spieltage gefunden.</div>';
@@ -716,13 +725,17 @@ async function loadTeam(teamId, els, cfg) {
     }
   }
 
-  // Future/active section
+  // Future/active section — only re-render if scores/status changed vs. snapshot
   if (els.future) {
     var futureEntries = activeEntries
       .filter(function(e) { return classifyGameday(e.gd, e.games, teamId, today) === 'active'; })
       .sort(function(a,b) { return a.gd.date.localeCompare(b.gd.date); });
     if (cfg.future > 0) futureEntries = futureEntries.slice(0, cfg.future);
-    els.future.innerHTML = renderFutureSection(futureEntries, teamId);
+    var futureChanged = futureEntries.some(function(e) {
+      var snapGd = snap.gamedays.find(function(gd) { return gd.id === e.id; });
+      return fingerprintGames(e.games) !== fingerprintGames(snapGd ? snapGd.games : []);
+    });
+    if (futureChanged) els.future.innerHTML = renderFutureSection(futureEntries, teamId);
   }
 }
 
