@@ -614,6 +614,18 @@ function quickRenderFromSnap(snap, teamId, els, cfg, today) {
     els.future.innerHTML = renderFutureSection(normalized, teamId, 0);
   }
 }
+function quickRenderFutureFromSnap(snap, teamId, els, cfg, today) {
+  if (!els.future) return;
+  var active = snap.gamedays.filter(function(gd) {
+    return gd.games && gd.games.some(function(g) {
+      return g.results.some(function(r) { return r.team_id === teamId; });
+    }) && classifyGameday(gd, gd.games, teamId, today) === 'active';
+  }).sort(function(a, b) { return a.date.localeCompare(b.date); });
+  var sf = cfg.future > 0 ? active.slice(0, cfg.future) : active;
+  var normalized = sf.map(function(gd) { return { gd: gd, games: gd.games }; });
+  _futureCache[teamId] = normalized;
+  els.future.innerHTML = renderFutureSection(normalized, teamId, 0);
+}
 // ── LOAD TEAM ────────────────────────────────────────────────────────────────
 async function loadTeam(teamId, els, cfg) {
   var today = new Date().toISOString().slice(0, 10);
@@ -622,8 +634,8 @@ async function loadTeam(teamId, els, cfg) {
   if (els.title && snapTeam) els.title.textContent = snapTeam.name;
   var cache = loadCache(teamId);
 
-  // Phase 1: Instant render — cache for returning users, snapshot for first-time users
-  var futureRenderedInPhase1 = false;
+  // Phase 1: Instant render — always show future from snapshot immediately;
+  //           use cache for past if available, otherwise fall back to snapshot
   if (cache && cache.past && cache.past.length) {
     if (els.past) {
       var sorted = cache.past.slice().sort(function(a,b) { return b.gd.date.localeCompare(a.gd.date); });
@@ -631,8 +643,10 @@ async function loadTeam(teamId, els, cfg) {
     }
   } else {
     quickRenderFromSnap(snap, teamId, els, cfg, today);
-    futureRenderedInPhase1 = true;
   }
+  // Always pre-fill future from snapshot so it shows instantly (Phase 4 will update silently if changed)
+  quickRenderFutureFromSnap(snap, teamId, els, cfg, today);
+  var futureRenderedInPhase1 = true;
 
   // Phase 2: Discover new gamedays (updates display when done)
   if (needsDiscovery(cache)) {
