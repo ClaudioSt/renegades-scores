@@ -616,6 +616,7 @@ async function loadTeam(teamId, els, cfg) {
   var cache = loadCache(teamId);
 
   // Phase 1: Instant render — cache for returning users, snapshot for first-time users
+  var futureRenderedInPhase1 = false;
   if (cache && cache.past && cache.past.length) {
     if (els.past) {
       var sorted = cache.past.slice().sort(function(a,b) { return b.gd.date.localeCompare(a.gd.date); });
@@ -623,6 +624,7 @@ async function loadTeam(teamId, els, cfg) {
     }
   } else {
     quickRenderFromSnap(snap, teamId, els, cfg, today);
+    futureRenderedInPhase1 = true;
   }
 
   // Phase 2: Discover new gamedays (updates display when done)
@@ -716,7 +718,7 @@ async function loadTeam(teamId, els, cfg) {
       .filter(function(e) { return classifyGameday(e.gd, e.games, teamId, today) === 'active'; })
       .sort(function(a,b) { return a.gd.date.localeCompare(b.gd.date); });
     if (cfg.future > 0) futureEntries = futureEntries.slice(0, cfg.future);
-    var futureChanged = futureEntries.some(function(e) {
+    var futureChanged = !futureRenderedInPhase1 || futureEntries.some(function(e) {
       var snapGd = snap.gamedays.find(function(gd) { return gd.id === e.id; });
       return fingerprintGames(e.games) !== fingerprintGames(snapGd ? snapGd.games : []);
     });
