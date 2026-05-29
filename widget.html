@@ -146,8 +146,6 @@
       background:none; border:1px solid #444; border-radius:4px;
       color:#888; font-size:0.85rem; cursor:pointer; }
     .toggle-more-future:hover { background:#1e1e1e; color:#aaa; }
-    .more-future-games { display:none; }
-    .more-future-games.is-open { display:block; }
     body.compact { padding: 12px; }
     body.compact .team-block { margin-bottom: 28px; }
     body.compact .gameday-card { margin-bottom: 10px; }
@@ -168,6 +166,7 @@ var BATCH_SIZE        = 50;
 var DISCOVERY_TTL_MS  = 7 * 24 * 60 * 60 * 1000;
 var CACHE_VERSION     = 3;
 var _pastCache        = {};
+var _futureCache      = {};
 
 // Team logo paths (relative, served from logos/ directory)
 var TEAM_LOGOS = {
@@ -615,7 +614,8 @@ function quickRenderFromSnap(snap, teamId, els, cfg, today) {
   if (els.future) {
     var sf = cfg.future > 0 ? active.slice(0, cfg.future) : active;
     var normalized = sf.map(function(gd) { return { gd: gd, games: gd.games }; });
-    els.future.innerHTML = renderFutureSection(normalized, teamId);
+    _futureCache[teamId] = normalized;
+    els.future.innerHTML = renderFutureSection(normalized, teamId, 0);
   }
 }
 // ── LOAD TEAM ────────────────────────────────────────────────────────────────
@@ -735,22 +735,30 @@ async function loadTeam(teamId, els, cfg) {
       var snapGd = snap.gamedays.find(function(gd) { return gd.id === e.id; });
       return fingerprintGames(e.games) !== fingerprintGames(snapGd ? snapGd.games : []);
     });
-    if (futureChanged) els.future.innerHTML = renderFutureSection(futureEntries, teamId);
+    if (futureChanged) {
+      _futureCache[teamId] = futureEntries;
+      els.future.innerHTML = renderFutureSection(futureEntries, teamId, 0);
+    }
   }
 }
 
-function renderFutureSection(entries, teamId) {
+function renderFutureSection(entries, teamId, visibleExtras) {
   if (!entries.length) return '<div class="no-data">Keine kommenden Spieltage geplant.</div>';
-  var next   = entries[0];
-  var extras = entries.slice(1);
-  var html = '';
+  visibleExtras = visibleExtras || 0;
+  var next      = entries[0];
+  var extras    = entries.slice(1);
+  var html      = '';
   if (extras.length) {
-    var extrasHtml = extras.slice().reverse()
+    var shown     = extras.slice(0, visibleExtras);
+    var remaining = extras.length - visibleExtras;
+    var shownHtml = shown.slice().reverse()
       .map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, false); }).join('');
-    html += '<button class="toggle-more-future" data-team="' + teamId + '">'
-      + 'Nächste Spieltage (' + extras.length + ')'
-      + '</button>'
-      + '<div class="more-future-games">' + extrasHtml + '</div>';
+    var buttonHtml = remaining > 0
+      ? '<button class="toggle-more-future" data-team="' + teamId + '" data-visible="' + visibleExtras + '">'
+        + 'Nächste Spieltage (' + remaining + ')'
+        + '</button>'
+      : '';
+    html = buttonHtml + shownHtml;
   }
   html += renderGamedayCard(next.gd, next.games, teamId, false);
   return html;
@@ -819,8 +827,11 @@ async function renderSpielplan(root, cfg) {
     }
     var fBtn = e.target.closest('.toggle-more-future');
     if (fBtn) {
-      fBtn.nextElementSibling.classList.add('is-open');
-      fBtn.style.display = 'none';
+      var teamId     = parseInt(fBtn.getAttribute('data-team'), 10);
+      var newVisible = parseInt(fBtn.getAttribute('data-visible'), 10) + 3;
+      var futureEl   = document.getElementById('t-future-' + teamId);
+      if (!futureEl || !_futureCache[teamId]) return;
+      futureEl.innerHTML = renderFutureSection(_futureCache[teamId], teamId, newVisible);
     }
   });
 }
