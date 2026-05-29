@@ -748,7 +748,7 @@ function renderFutureSection(entries, teamId) {
     var extrasHtml = extras.slice().reverse()
       .map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, false); }).join('');
     html += '<button class="toggle-more-future" data-team="' + teamId + '">'
-      + 'Weitere kommende Spieltage (' + extras.length + ')'
+      + 'Nächste Spieltage (' + extras.length + ')'
       + '</button>'
       + '<div class="more-future-games">' + extrasHtml + '</div>';
   }
@@ -821,7 +821,8 @@ async function renderSpielplan(root, cfg) {
     }
     var fBtn = e.target.closest('.toggle-more-future');
     if (fBtn) {
-      fBtn.nextElementSibling.classList.toggle('is-open');
+      fBtn.nextElementSibling.classList.add('is-open');
+      fBtn.style.display = 'none';
     }
   });
 }
