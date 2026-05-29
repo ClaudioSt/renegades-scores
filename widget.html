@@ -548,7 +548,7 @@ function renderGamedayCard(gd, games, teamId, showScore) {
   if (teamGames.length === 0) return '';
 
   var rows   = teamGames.slice().sort(function(a,b) {
-    return (a.scheduled || '').localeCompare(b.scheduled || '');
+    return (b.scheduled || '').localeCompare(a.scheduled || '');
   }).map(function(g) { return renderGameRow(g, teamId, showScore); }).join('');
   var name   = escapeHtml(gd.name);
   var date   = escapeHtml(formatDate(gd.date));
@@ -730,9 +730,8 @@ function renderPastSection(pastSorted, teamId, visibleCount) {
       + 'Weitere laden (' + remaining + ')'
       + '</button>'
     : '';
-  // Show oldest-visible first so newest past game is adjacent to upcoming games
-  var html = shown.slice().reverse().map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('');
-  return buttonHtml + html;
+  var html = shown.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('');
+  return html + buttonHtml;
 }
 
 // ── VIEW RENDERERS ───────────────────────────────────────────────────────────
@@ -746,13 +745,13 @@ async function renderSpielplan(root, cfg) {
     block.innerHTML =
       (cfg.showTitle ? '<div class="team-title" id="t-title-' + teamId + '"></div>' : '')
       + '<div id="t-live-' + teamId + '"></div>'
-      + (cfg.showPast
-          ? '<div class="section-title">Vergangene Spieltage</div>'
-            + '<div id="t-past-' + teamId + '"><div class="loading">Lade Daten…</div></div>'
-          : '')
       + (cfg.showFuture
           ? '<div class="section-title">Kommende Spieltage</div>'
             + '<div id="t-future-' + teamId + '"><div class="loading">Lade Daten…</div></div>'
+          : '')
+      + (cfg.showPast
+          ? '<div class="section-title">Vergangene Spieltage</div>'
+            + '<div id="t-past-' + teamId + '"><div class="loading">Lade Daten…</div></div>'
           : '');
     root.appendChild(block);
     elMap[teamId] = {
