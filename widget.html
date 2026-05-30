@@ -161,7 +161,6 @@
       background: #f44336; color: #fff; font-size: 0.65rem; font-weight: 900;
       letter-spacing: 1.5px; padding: 2px 6px; border-radius: 3px; animation: blink 1s infinite;
     }
-    .lt-gd-name { font-size: 0.8rem; font-weight: 700; color: #fff; }
     .lt-status  { font-size: 0.7rem; color: #888; margin-left: auto; }
     .lt-scorebar {
       background: #181818; padding: 10px 18px;
@@ -603,7 +602,6 @@ function renderLiveGameB3(gs) {
   return '<div class="live-ticker-game" id="lt-game-' + gs.gameId + '">'
     + '<div class="lt-header">'
     +   '<span class="lt-live-badge">● LIVE</span>'
-    +   '<span class="lt-gd-name">' + escapeHtml(gs.gamedayName) + '</span>'
     +   '<span class="lt-status">' + escapeHtml(gs.status) + '</span>'
     + '</div>'
     + '<div class="lt-scorebar">'
