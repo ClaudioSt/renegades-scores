@@ -884,9 +884,10 @@ async function loadTeam(teamId, els, cfg) {
   var abbrev      = resolveTeamAbbrev(teamId, allEntries);
   if (els.title) els.title.textContent = resolveTeamName(abbrev);
 
-  // Live section
+  // Live section — only from today's active entries (not future gamedays)
   var liveItems = [];
   activeEntries.forEach(function(e) {
+    if (e.gd.date !== today) return;
     e.games.forEach(function(g) {
       if (g.status === 'live' && g.results.some(function(r) { return r.team_id === teamId; }))
         liveItems.push({ game: g, gd: e.gd });
@@ -894,27 +895,49 @@ async function loadTeam(teamId, els, cfg) {
   });
   if (liveItems.length) {
     els.live.innerHTML = '<div class="section-title">🔴 Live jetzt</div>'
-      + liveItems.map(function(x) { return renderLiveBanner(x.game, x.gd, teamId); }).join('');
+      + liveItems.map(function(x) { return renderLiveBanner(x.game, x.gd, teamId, cfg.liveUrl); }).join('');
+    startSpielplanPolling(liveItems.map(function(x) { return x.game.id; }));
   } else {
     els.live.innerHTML = '';
   }
 
-  // Past section — only re-render if a gameday was newly promoted from active
-  if (els.past && pastChanged) {
-    var pastSorted = cache.past.slice().sort(function(a,b) { return b.gd.date.localeCompare(a.gd.date); });
-    if (!pastSorted.length) {
-      els.past.innerHTML = '<div class="no-data">Keine vergangenen Spieltage gefunden.</div>';
-    } else {
-      _pastCache[teamId] = pastSorted;
-      els.past.innerHTML = renderPastSection(pastSorted, teamId, cfg.past);
+  // Today's finished games — rendered in past section with score
+  var todayFinishedByGd = {};
+  activeEntries.forEach(function(e) {
+    if (e.gd.date !== today) return;
+    var split = splitTodayGames(e.games, teamId);
+    if (split.finished.length) {
+      todayFinishedByGd[e.gd.id] = { gd: e.gd, games: split.finished };
     }
+  });
+
+  // Past section — re-render if a gameday promoted from active OR today has finished games
+  var hasTodayFinished = Object.keys(todayFinishedByGd).length > 0;
+  if (els.past && (pastChanged || hasTodayFinished)) {
+    var pastSorted = cache.past.slice().sort(function(a,b) { return b.gd.date.localeCompare(a.gd.date); });
+    _pastCache[teamId] = pastSorted;
+    var todayFinishedHtml = Object.keys(todayFinishedByGd).map(function(gdId) {
+      var entry = todayFinishedByGd[gdId];
+      return renderGamedayCard(entry.gd, entry.games, teamId, true);
+    }).join('');
+    var pastBody = pastSorted.length
+      ? renderPastSection(pastSorted, teamId, cfg.past)
+      : '<div class="no-data">Keine vergangenen Spieltage gefunden.</div>';
+    els.past.innerHTML = todayFinishedHtml + pastBody;
   }
 
   // Future/active section — only re-render if scores/status changed vs. snapshot
   if (els.future) {
     var futureEntries = activeEntries
       .filter(function(e) { return classifyGameday(e.gd, e.games, teamId, today) === 'active'; })
-      .sort(function(a,b) { return a.gd.date.localeCompare(b.gd.date); });
+      .sort(function(a,b) { return a.gd.date.localeCompare(b.gd.date); })
+      .map(function(e) {
+        if (e.gd.date !== today) return e;
+        // For today's gameday, only show upcoming games (not live or finished)
+        var split = splitTodayGames(e.games, teamId);
+        return { id: e.id, gd: e.gd, games: split.upcoming };
+      })
+      .filter(function(e) { return e.games.length > 0; });
     if (cfg.future > 0) futureEntries = futureEntries.slice(0, cfg.future);
     var futureChanged = !futureRenderedInPhase1 || futureEntries.some(function(e) {
       var snapGd = snap.gamedays.find(function(gd) { return gd.id === e.id; });
