@@ -204,8 +204,15 @@ var LIVETICKER_BASE   = 'https://leaguesphere.app/liveticker/';
 var BATCH_SIZE        = 50;
 var DISCOVERY_TTL_MS  = 7 * 24 * 60 * 60 * 1000;
 var CACHE_VERSION     = 3;
+var LIVETICKER_API    = API_BASE + '/liveticker/';
 var _pastCache        = {};
 var _futureCache      = {};
+var _liveGames        = {};         // gameId → gameState (see spec)
+var _liveInterval     = null;       // setInterval handle for polling
+var _watchedGameIds   = new Set();  // game.id values for watched teams' active gamedays
+var _liveFailCount    = 0;          // consecutive poll failures
+var _liveTeamNames    = {};         // teamName → teamId, for mid-session new-game detection
+var _liveSnap         = null;       // snapshot stored by renderLiveView for polling use
 
 // Team logo paths (relative, served from logos/ directory)
 var TEAM_LOGOS = {
