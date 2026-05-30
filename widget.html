@@ -964,6 +964,28 @@ function renderPastSection(pastSorted, teamId, visibleCount) {
 
 // ── VIEW RENDERERS ───────────────────────────────────────────────────────────
 
+function startSpielplanPolling(newGameIds) {
+  newGameIds.forEach(function(id) { _spielplanLiveIds.add(id); });
+  if (_spielplanPollInterval) return;
+
+  function poll() {
+    fetchJSON(LIVETICKER_API).then(function(data) {
+      data.forEach(function(game) {
+        if (!_spielplanLiveIds.has(game.gameId)) return;
+        var el = document.getElementById('sp-live-score-' + game.gameId);
+        if (el) el.textContent = game.home.score + ' : ' + game.away.score;
+        if (game.status === 'Beendet') _spielplanLiveIds.delete(game.gameId);
+      });
+      if (_spielplanLiveIds.size === 0) {
+        clearInterval(_spielplanPollInterval);
+        _spielplanPollInterval = null;
+      }
+    }).catch(function() { /* silent — retry next tick */ });
+  }
+
+  _spielplanPollInterval = setInterval(poll, 30000);
+}
+
 function startLivePolling() {
   _liveFailCount = 0;
 

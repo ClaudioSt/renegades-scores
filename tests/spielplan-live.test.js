@@ -197,3 +197,155 @@ describe('splitTodayGames', () => {
     assert.strictEqual(result.live.length, 0);
   });
 });
+
+// ─── startSpielplanPolling ───────────────────────────────────────────────────
+
+describe('startSpielplanPolling', () => {
+  function makeContext(fetchData, captureInterval) {
+    var captured = { fn: null, cleared: false, intervalId: 1 };
+    var w = freshContext({
+      setInterval: function(fn, ms) {
+        captured.fn = fn;
+        captureInterval && captureInterval(captured);
+        return captured.intervalId;
+      },
+      clearInterval: function() { captured.cleared = true; },
+      fetch: async function() {
+        return { ok: true, json: async function() { return fetchData; } };
+      },
+      document: {
+        getElementById: function() { return null; },
+        createElement:   function(tag) { return { tagName: tag, className: '', innerHTML: '', appendChild: function(){} }; },
+        documentElement: { style: { setProperty: function(){} } },
+        body:            { classList: { add: function(){}, remove: function(){} }, getBoundingClientRect: function(){ return { height: 0 }; } },
+      },
+    });
+    return { w: w, captured: captured };
+  }
+
+  it('adds game IDs to _spielplanLiveIds', () => {
+    var { w } = makeContext([]);
+    w.startSpielplanPolling([101, 202]);
+    assert.ok(w._spielplanLiveIds.has(101), '101 must be in the set');
+    assert.ok(w._spielplanLiveIds.has(202), '202 must be in the set');
+  });
+
+  it('merges IDs from multiple calls into shared set', () => {
+    var { w } = makeContext([]);
+    w.startSpielplanPolling([101]);
+    w.startSpielplanPolling([202]);
+    assert.ok(w._spielplanLiveIds.has(101), '101 must be in the set');
+    assert.ok(w._spielplanLiveIds.has(202), '202 must be in the set');
+  });
+
+  it('does not start a second interval when called twice', () => {
+    var intervalCount = 0;
+    var w = freshContext({
+      setInterval: function() { intervalCount++; return intervalCount; },
+      clearInterval: function() {},
+      fetch: async function() { return { ok: true, json: async function() { return []; } }; },
+      document: {
+        getElementById: function() { return null; },
+        createElement:   function(tag) { return { tagName: tag, className: '', innerHTML: '', appendChild: function(){} }; },
+        documentElement: { style: { setProperty: function(){} } },
+        body:            { classList: { add: function(){} }, getBoundingClientRect: function(){ return { height: 0 }; } },
+      },
+    });
+    w.startSpielplanPolling([101]);
+    w.startSpielplanPolling([202]);
+    assert.strictEqual(intervalCount, 1, 'setInterval must only be called once');
+  });
+
+  it('updates score element textContent on poll tick', async () => {
+    var scoreEl = { textContent: '' };
+    var pollFn;
+    var w = freshContext({
+      setInterval: function(fn) { pollFn = fn; return 1; },
+      clearInterval: function() {},
+      fetch: async function() {
+        return { ok: true, json: async function() {
+          return [{ gameId: 100, status: 'live', home: { score: 14 }, away: { score: 7 } }];
+        }};
+      },
+      document: {
+        getElementById: function(id) { return id === 'sp-live-score-100' ? scoreEl : null; },
+        createElement:   function(tag) { return { tagName: tag, className: '', innerHTML: '', appendChild: function(){} }; },
+        documentElement: { style: { setProperty: function(){} } },
+        body:            { classList: { add: function(){} }, getBoundingClientRect: function(){ return { height: 0 }; } },
+      },
+    });
+    w.startSpielplanPolling([100]);
+    pollFn();
+    await new Promise(function(r) { setTimeout(r, 20); });
+    assert.strictEqual(scoreEl.textContent, '14 : 7', 'score element must be updated');
+  });
+
+  it('removes game ID and clears interval when status is Beendet', async () => {
+    var cleared = false;
+    var pollFn;
+    var w = freshContext({
+      setInterval: function(fn) { pollFn = fn; return 1; },
+      clearInterval: function() { cleared = true; },
+      fetch: async function() {
+        return { ok: true, json: async function() {
+          return [{ gameId: 100, status: 'Beendet', home: { score: 21 }, away: { score: 14 } }];
+        }};
+      },
+      document: {
+        getElementById: function() { return null; },
+        createElement:   function(tag) { return { tagName: tag, className: '', innerHTML: '', appendChild: function(){} }; },
+        documentElement: { style: { setProperty: function(){} } },
+        body:            { classList: { add: function(){} }, getBoundingClientRect: function(){ return { height: 0 }; } },
+      },
+    });
+    w.startSpielplanPolling([100]);
+    pollFn();
+    await new Promise(function(r) { setTimeout(r, 20); });
+    assert.ok(!w._spielplanLiveIds.has(100), 'finished game ID must be removed');
+    assert.ok(cleared, 'interval must be cleared when all games finished');
+  });
+
+  it('does not throw when score element is not in DOM', async () => {
+    var pollFn;
+    var w = freshContext({
+      setInterval: function(fn) { pollFn = fn; return 1; },
+      clearInterval: function() {},
+      fetch: async function() {
+        return { ok: true, json: async function() {
+          return [{ gameId: 999, status: 'live', home: { score: 7 }, away: { score: 0 } }];
+        }};
+      },
+      document: {
+        getElementById: function() { return null; },
+        createElement:   function(tag) { return { tagName: tag, className: '', innerHTML: '', appendChild: function(){} }; },
+        documentElement: { style: { setProperty: function(){} } },
+        body:            { classList: { add: function(){} }, getBoundingClientRect: function(){ return { height: 0 }; } },
+      },
+    });
+    w.startSpielplanPolling([999]);
+    await assert.doesNotReject(async function() {
+      pollFn();
+      await new Promise(function(r) { setTimeout(r, 20); });
+    });
+  });
+
+  it('silently ignores poll fetch errors', async () => {
+    var pollFn;
+    var w = freshContext({
+      setInterval: function(fn) { pollFn = fn; return 1; },
+      clearInterval: function() {},
+      fetch: async function() { throw new Error('network error'); },
+      document: {
+        getElementById: function() { return null; },
+        createElement:   function(tag) { return { tagName: tag, className: '', innerHTML: '', appendChild: function(){} }; },
+        documentElement: { style: { setProperty: function(){} } },
+        body:            { classList: { add: function(){} }, getBoundingClientRect: function(){ return { height: 0 }; } },
+      },
+    });
+    w.startSpielplanPolling([100]);
+    await assert.doesNotReject(async function() {
+      pollFn();
+      await new Promise(function(r) { setTimeout(r, 20); });
+    });
+  });
+});
