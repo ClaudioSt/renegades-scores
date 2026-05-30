@@ -151,6 +151,47 @@
     body.compact .game-row-main { padding: 10px 14px; }
     body.compact .game-row .team-home, body.compact .game-row .team-away { font-size: 0.85rem; }
     body.compact .score-box .score { font-size: 1rem; }
+    /* ── LIVE TICKER ─────────────────────────────────────────────────────────────── */
+    .live-ticker-game { margin-bottom: 24px; }
+    .lt-header {
+      background: #1c1c1c; padding: 10px 18px; border-bottom: 1px solid #2a2a2a;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .lt-live-badge {
+      background: #f44336; color: #fff; font-size: 0.65rem; font-weight: 900;
+      letter-spacing: 1.5px; padding: 2px 6px; border-radius: 3px; animation: blink 1s infinite;
+    }
+    .lt-gd-name { font-size: 0.8rem; font-weight: 700; color: #fff; }
+    .lt-status  { font-size: 0.7rem; color: #888; margin-left: auto; }
+    .lt-scorebar {
+      background: #181818; padding: 10px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid #222;
+    }
+    .lt-team { font-size: 0.8rem; font-weight: 700; color: #ccc; }
+    .lt-team.lt-ours { color: var(--accent); }
+    .lt-score-center { text-align: center; }
+    .lt-score-val { font-size: 1.3rem; font-weight: 900; color: #fff; }
+    .lt-score-meta { font-size: 0.65rem; color: #888; margin-top: 2px; }
+    .lt-possession { font-size: 0.65rem; color: #ff9800; margin-top: 1px; }
+    .lt-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+    .lt-table td { padding: 3px 10px; border-bottom: 1px solid #1a1a1a; vertical-align: top; }
+    .lt-col-home { width: 44%; text-align: right; color: #aaa; }
+    .lt-col-mid  { width: 12%; text-align: center; font-weight: 700; font-size: 0.7rem; color: #555; vertical-align: middle; white-space: nowrap; }
+    .lt-col-away { width: 44%; text-align: left; color: #aaa; }
+    .lt-team-label { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 1px; }
+    .lt-col-home .lt-team-label { color: var(--accent); }
+    .lt-col-away .lt-team-label { color: #6495ed; }
+    .lt-scoring td { background: rgba(255,69,0,0.06); }
+    .lt-scoring .lt-col-home, .lt-scoring .lt-col-away { color: #f0f0f0; }
+    .lt-scoring .lt-col-mid { color: #fff; }
+    .lt-neutral td { text-align: center !important; color: #444; font-style: italic; padding: 5px 8px; }
+    .lt-conn-error {
+      background: #2a1a10; border: 1px solid #5a3010; border-radius: 6px;
+      padding: 8px 14px; color: #ff9800; font-size: 0.8rem; margin-bottom: 10px;
+    }
+    @keyframes lt-flash { 0% { background: rgba(255,69,0,0.25); } 100% { background: transparent; } }
+    .lt-flash { animation: lt-flash 0.8s ease-out; }
   </style>
 </head>
 <body>
