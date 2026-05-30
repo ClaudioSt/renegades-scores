@@ -294,8 +294,11 @@ function parseConfigFromSearch(search) {
   var showTitle   = params.get('title')       !== '0';
   var compact     = params.get('compact')     === '1';
   var view        = params.get('view') || 'spielplan';
+  var liveUrl     = params.get('live_url') || '';
+  if (liveUrl && !/^https?:\/\//.test(liveUrl)) liveUrl = '';
   return { teams: teams, color: color, refresh: refresh, past: past, future: future,
-           showPast: showPast, showFuture: showFuture, showTitle: showTitle, compact: compact, view: view };
+           showPast: showPast, showFuture: showFuture, showTitle: showTitle, compact: compact,
+           view: view, liveUrl: liveUrl };
 }
 function parseConfig() { return parseConfigFromSearch(window.location.search); }
 
@@ -1099,18 +1102,14 @@ async function renderLiveView(root, cfg) {
     }
 
     // Fetch full tick history for each watched game via getAllTicksFor
-    var liveHtml    = '';
-    var fallbackHtml = '';
+    var liveHtml = '';
+    var teamsWithLiveGame = new Set();
     await Promise.all(Array.from(_watchedGameIds).map(async function(gameId) {
       var teamId = gameIdToTeamId[gameId];
       try {
         var data = await fetchJSON(LIVETICKER_API + '?getAllTicksFor=' + gameId);
         var game = data.find(function(g) { return g.gameId === gameId; });
-        if (!game) {
-          // Scheduled but not yet started in liveticker
-          fallbackHtml += renderUpcomingFallback(teamId, snap);
-          return;
-        }
+        if (!game || (game.status !== '1. Halbzeit' && game.status !== '2. Halbzeit')) return;
         var teamName    = teamNames[teamId] || '';
         var watchedSide = (game.home.name === teamName) ? 'home' : 'away';
         var gamedayName = '';
@@ -1136,11 +1135,14 @@ async function renderLiveView(root, cfg) {
         };
         _liveGames[gameId] = gs;
         liveHtml += renderLiveGameB3(gs);
-      } catch(e) {
-        // getAllTicksFor failed — spec calls for incremental-only fallback; using upcoming as simpler alternative
-        fallbackHtml += renderUpcomingFallback(teamId, snap);
-      }
+        teamsWithLiveGame.add(teamId);
+      } catch(e) { /* swallow — team gets fallback below */ }
     }));
+
+    var fallbackHtml = cfg.teams
+      .filter(function(teamId) { return !teamsWithLiveGame.has(teamId); })
+      .map(function(teamId) { return renderUpcomingFallback(teamId, snap); })
+      .join('');
 
     root.innerHTML = (liveHtml + fallbackHtml)
       || '<div class="no-data">Keine Spiele gefunden.</div>';
