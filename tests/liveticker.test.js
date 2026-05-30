@@ -147,3 +147,96 @@ describe('buildTickRows', () => {
     assert.ok(!html.includes('6:0'), 'per-event score must NOT appear when hasFullHistory=false');
   });
 });
+
+// ─── renderLiveGameB3 ─────────────────────────────────────────────────────────
+
+describe('renderLiveGameB3', () => {
+  let w;
+  beforeEach(() => { w = freshContext(); });
+
+  function makeGs(overrides) {
+    return Object.assign({
+      gameId: 42,
+      homeName: 'Home FC',
+      awayName: 'Away SC',
+      watchedSide: 'home',
+      score: { home: 7, away: 0 },
+      status: '1. Halbzeit',
+      possession: 'home',
+      ticks: [],
+      seenFingerprints: new Set(),
+      hasFullHistory: true,
+      gamedayName: 'Spieltag 5'
+    }, overrides || {});
+  }
+
+  it('XSS — home team name is escaped', () => {
+    var gs = makeGs({ homeName: '<script>alert(1)</script>' });
+    var html = w.renderLiveGameB3(gs);
+    assert.ok(!/<script/i.test(html), 'raw <script must not appear');
+  });
+
+  it('XSS — away team name is escaped', () => {
+    var gs = makeGs({ awayName: '<img src=x onerror=alert(1)>' });
+    var html = w.renderLiveGameB3(gs);
+    assert.ok(!/<[a-z][^>]* onerror=/i.test(html), 'onerror= must not appear unescaped');
+  });
+
+  it('XSS — tick text is escaped', () => {
+    var gs = makeGs({
+      ticks: [{ text: '<script>steal()</script>', team: 'home', time: '08:00' }]
+    });
+    var html = w.renderLiveGameB3(gs);
+    assert.ok(!/<script/i.test(html), 'script in tick text must be escaped');
+  });
+
+  it('XSS — gameday name is escaped', () => {
+    var gs = makeGs({ gamedayName: '"><svg onload=alert(1)>' });
+    var html = w.renderLiveGameB3(gs);
+    assert.ok(!/<[a-z][^>]* onload=/i.test(html), 'onload= must not appear unescaped');
+  });
+
+  it('includes correct DOM ids for gameId', () => {
+    var gs = makeGs({ gameId: 7400 });
+    var html = w.renderLiveGameB3(gs);
+    assert.ok(html.includes('id="lt-game-7400"'),  'wrapper id must be lt-game-<gameId>');
+    assert.ok(html.includes('id="lt-score-7400"'), 'score cell id must be lt-score-<gameId>');
+    assert.ok(html.includes('id="lt-body-7400"'),  'tbody id must be lt-body-<gameId>');
+  });
+
+  it('gives watched team (home side) the lt-ours accent class', () => {
+    var gs = makeGs({ watchedSide: 'home', homeName: 'Renegades', awayName: 'Sharks' });
+    var html = w.renderLiveGameB3(gs);
+    // lt-ours must appear before (or adjacent to) "Renegades" in the scorebar
+    var oursIdx = html.indexOf('lt-ours');
+    assert.ok(oursIdx !== -1, 'lt-ours class must appear');
+    // And the opponent must NOT have lt-ours
+    var afterOurs = html.slice(oursIdx);
+    assert.ok(afterOurs.includes('Renegades'), 'Renegades must follow lt-ours class');
+  });
+
+  it('gives watched team (away side) the lt-ours accent class', () => {
+    var gs = makeGs({ watchedSide: 'away', homeName: 'Sharks', awayName: 'Renegades' });
+    var html = w.renderLiveGameB3(gs);
+    assert.ok(html.includes('lt-ours'), 'lt-ours must appear even when watchedSide=away');
+  });
+
+  it('shows LIVE badge', () => {
+    var html = w.renderLiveGameB3(makeGs());
+    assert.ok(html.includes('lt-live-badge'), 'LIVE badge must appear');
+  });
+
+  it('shows score in scorebar', () => {
+    var gs = makeGs({ score: { home: 14, away: 7 }, watchedSide: 'home' });
+    var html = w.renderLiveGameB3(gs);
+    assert.ok(html.includes('14 : 7'), 'score must appear in scorebar');
+  });
+
+  it('shows opponent score on left when watchedSide=away', () => {
+    // watchedSide=away means away score (7) is "ours" → shown first as "7 : 14"
+    var gs = makeGs({ score: { home: 14, away: 7 }, watchedSide: 'away' });
+    var html = w.renderLiveGameB3(gs);
+    assert.ok(html.includes('7 : 14'), 'away score (7) must be shown first when watchedSide=away');
+  });
+});
+

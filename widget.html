@@ -397,6 +397,38 @@ function renderGameLogEvents(log, results) {
     + '<tbody>' + rows + '</tbody></table>';
 }
 
+function renderLiveGameB3(gs) {
+  var ourName  = escapeHtml(gs.watchedSide === 'home' ? gs.homeName : gs.awayName);
+  var oppName  = escapeHtml(gs.watchedSide === 'home' ? gs.awayName : gs.homeName);
+  var ourScore = gs.watchedSide === 'home' ? gs.score.home : gs.score.away;
+  var oppScore = gs.watchedSide === 'home' ? gs.score.away : gs.score.home;
+  var scoreStr = (ourScore != null && oppScore != null)
+    ? escapeHtml(ourScore + ' : ' + oppScore) : '– : –';
+  var poss = '';
+  if (gs.possession === gs.watchedSide)      poss = '🏈 ' + ourName;
+  else if (gs.possession !== null)           poss = '🏈 ' + oppName;
+  return '<div class="live-ticker-game" id="lt-game-' + gs.gameId + '">'
+    + '<div class="lt-header">'
+    +   '<span class="lt-live-badge">● LIVE</span>'
+    +   '<span class="lt-gd-name">' + escapeHtml(gs.gamedayName) + '</span>'
+    +   '<span class="lt-status">' + escapeHtml(gs.status) + '</span>'
+    + '</div>'
+    + '<div class="lt-scorebar">'
+    +   '<div class="lt-team lt-ours">' + ourName + '</div>'
+    +   '<div class="lt-score-center">'
+    +     '<div class="lt-score-val" id="lt-score-' + gs.gameId + '">' + scoreStr + '</div>'
+    +     '<div class="lt-score-meta">' + escapeHtml(gs.status) + '</div>'
+    +     (poss ? '<div class="lt-possession">' + poss + '</div>' : '')
+    +   '</div>'
+    +   '<div class="lt-team">' + oppName + '</div>'
+    + '</div>'
+    + '<table class="lt-table">'
+    + '<tbody id="lt-body-' + gs.gameId + '">'
+    + buildTickRows(gs)
+    + '</tbody></table>'
+    + '</div>';
+}
+
 var _openDetail = null;
 function _toggleGameDetail(mainEl) {
   var detail = mainEl.parentElement.querySelector('.game-detail');
