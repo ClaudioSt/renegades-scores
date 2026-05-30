@@ -200,7 +200,7 @@
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
 var API_BASE          = 'https://leaguesphere.app/api';
-var LIVETICKER_BASE   = 'https://leaguesphere.app/liveticker/';
+var LIVETICKER_BASE   = 'https://leaguesphere.app/liveticker/'; // HTML gameday page (not the JSON API)
 var BATCH_SIZE        = 50;
 var DISCOVERY_TTL_MS  = 7 * 24 * 60 * 60 * 1000;
 var CACHE_VERSION     = 3;
@@ -569,6 +569,7 @@ function renderLiveGameB3(gs) {
   var oppScore = gs.watchedSide === 'home' ? gs.score.away : gs.score.home;
   var scoreStr = (ourScore != null && oppScore != null)
     ? escapeHtml(ourScore + ' : ' + oppScore) : '– : –';
+  // ourName and oppName are already escapeHtml()-processed; poss is safe for innerHTML
   var poss = '';
   if (gs.possession === gs.watchedSide)      poss = '🏈 ' + ourName;
   else if (gs.possession !== null)           poss = '🏈 ' + oppName;
@@ -1057,6 +1058,7 @@ function startLivePolling() {
 async function renderLiveView(root, cfg) {
   root.innerHTML = '<div class="loading">Lade Live-Daten…</div>';
   _liveGames = {};
+  if (_liveInterval) { clearInterval(_liveInterval); _liveInterval = null; }
   try {
     var snap = await loadSnapshot();
     _liveSnap = snap;
@@ -1135,7 +1137,7 @@ async function renderLiveView(root, cfg) {
         _liveGames[gameId] = gs;
         liveHtml += renderLiveGameB3(gs);
       } catch(e) {
-        // getAllTicksFor failed — fall back to upcoming
+        // getAllTicksFor failed — spec calls for incremental-only fallback; using upcoming as simpler alternative
         fallbackHtml += renderUpcomingFallback(teamId, snap);
       }
     }));
