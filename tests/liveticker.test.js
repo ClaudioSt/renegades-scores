@@ -240,3 +240,54 @@ describe('renderLiveGameB3', () => {
   });
 });
 
+// ─── renderUpcomingFallback ───────────────────────────────────────────────────
+
+describe('renderUpcomingFallback', () => {
+  let w;
+  beforeEach(() => { w = freshContext(); });
+
+  function makeSnap(gamedayDate) {
+    return {
+      teams: [{ id: 159, name: 'Nürnberg Renegades', abbrev: 'Nürn', gamedays: [] }],
+      gamedays: [{
+        id: 1,
+        date: gamedayDate,
+        name: 'Spieltag 1',
+        start: '10:00',
+        league_display: 'RL Bayern',
+        address: '',
+        games: [{
+          id: 100, status: 'Geplant', stage: '', standing: '',
+          scheduled: '10:00:00', field: '1',
+          final_score: null, halftime_score: null,
+          results: [
+            { team_id: 159, team_name: 'Nürn', pa: null, isHome: true },
+            { team_id: 1,   team_name: 'Other', pa: null, isHome: false }
+          ]
+        }]
+      }]
+    };
+  }
+
+  it('shows fallback label and gameday name when a future game exists', () => {
+    var snap = makeSnap('2099-01-01'); // far future → always active
+    var html = w.renderUpcomingFallback(159, snap);
+    assert.ok(html.includes('nächstes Spiel'), 'fallback label must contain "nächstes Spiel"');
+    assert.ok(html.includes('Spieltag 1'), 'upcoming gameday name must appear');
+  });
+
+  it('returns no-data message when no future gamedays found', () => {
+    var snap = { teams: [], gamedays: [] };
+    var html = w.renderUpcomingFallback(159, snap);
+    assert.ok(html.includes('keine') || html.includes('Keine'),
+      'must show "keine" message when no gamedays found');
+  });
+
+  it('XSS — gameday name is escaped', () => {
+    var snap = makeSnap('2099-01-01');
+    snap.gamedays[0].name = '<script>alert(1)</script>';
+    var html = w.renderUpcomingFallback(159, snap);
+    assert.ok(!/<script/i.test(html), 'script tag must be escaped');
+  });
+});
+

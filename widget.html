@@ -594,6 +594,23 @@ function renderLiveGameB3(gs) {
     + '</div>';
 }
 
+function renderUpcomingFallback(teamId, snap) {
+  var today = new Date().toISOString().slice(0, 10);
+  var upcoming = snap.gamedays.filter(function(gd) {
+    return gd.games
+      && gd.games.some(function(g) {
+           return g.results.some(function(r) { return r.team_id === teamId; });
+         })
+      && classifyGameday(gd, gd.games, teamId, today) === 'active';
+  }).sort(function(a, b) { return a.date.localeCompare(b.date); });
+  if (!upcoming.length) {
+    return '<div class="no-data">Keine kommenden Spieltage gefunden.</div>';
+  }
+  var gd = upcoming[0];
+  return '<div class="section-title">Kein Live-Spiel — nächstes Spiel:</div>'
+    + renderGamedayCard(gd, gd.games, teamId, false);
+}
+
 function renderLiveBanner(game, gd, teamId) {
   var home = game.results.find(function(r) { return r.isHome; });
   var away = game.results.find(function(r) { return !r.isHome; });
