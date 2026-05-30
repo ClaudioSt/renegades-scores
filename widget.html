@@ -928,6 +928,131 @@ function renderPastSection(pastSorted, teamId, visibleCount) {
 
 // ── VIEW RENDERERS ───────────────────────────────────────────────────────────
 
+function startLivePolling() {
+  _liveFailCount = 0;
+
+  function poll() {
+    fetchJSON(LIVETICKER_API).then(function(data) {
+      _liveFailCount = 0;
+      var errEl = document.getElementById('lt-error-banner');
+      if (errEl) errEl.parentNode.removeChild(errEl);
+
+      // Update known live games
+      data.forEach(function(game) {
+        if (!_watchedGameIds.has(game.gameId)) return;
+        var gs = _liveGames[game.gameId];
+        if (!gs) return;
+
+        // Accumulate new ticks (API newest-first; process oldest-first)
+        var newTicks = [];
+        game.ticks.slice().reverse().forEach(function(tick) {
+          var fp = tick.text + '|' + tick.time;
+          if (!gs.seenFingerprints.has(fp)) {
+            gs.seenFingerprints.add(fp);
+            gs.ticks.unshift(tick);  // maintain newest-first order in state
+            newTicks.push(tick);
+          }
+        });
+
+        // Score / status / possession update
+        var newScore    = { home: game.home.score, away: game.away.score };
+        var scoreChanged = newScore.home !== gs.score.home || newScore.away !== gs.score.away;
+        gs.score     = newScore;
+        gs.status    = game.status;
+        gs.possession = game.home.isInPossession ? 'home'
+                      : (game.away.isInPossession ? 'away' : null);
+
+        // DOM: flash score on change
+        if (scoreChanged) {
+          var scoreEl = document.getElementById('lt-score-' + gs.gameId);
+          if (scoreEl) {
+            var ourScore = gs.watchedSide === 'home' ? newScore.home : newScore.away;
+            var oppScore = gs.watchedSide === 'home' ? newScore.away : newScore.home;
+            scoreEl.textContent = (ourScore != null && oppScore != null)
+              ? ourScore + ' : ' + oppScore : '– : –';
+            scoreEl.classList.remove('lt-flash');
+            void scoreEl.offsetWidth;   // force reflow so animation restarts
+            scoreEl.classList.add('lt-flash');
+          }
+        }
+
+        // DOM: update tick list
+        if (newTicks.length) {
+          var bodyEl = document.getElementById('lt-body-' + gs.gameId);
+          if (bodyEl) bodyEl.innerHTML = buildTickRows(gs);
+        }
+
+        // Check if all watched games are finished → stop polling
+        if (game.status === 'Beendet') {
+          gs.status = 'Beendet';
+          var allDone = Object.keys(_liveGames).every(function(id) {
+            return _liveGames[id].status === 'Beendet';
+          });
+          if (allDone && _liveInterval) {
+            clearInterval(_liveInterval);
+            _liveInterval = null;
+          }
+        }
+      });
+
+      // Detect new live games that started after page load
+      data.forEach(function(game) {
+        if (!_watchedGameIds.has(game.gameId) || _liveGames[game.gameId]) return;
+        fetchJSON(LIVETICKER_API + '?getAllTicksFor=' + game.gameId).then(function(fullData) {
+          var fullGame = fullData.find(function(g) { return g.gameId === game.gameId; });
+          if (!fullGame) return;
+          var watchedSide = _liveTeamNames[fullGame.home.name] ? 'home' : 'away';
+          var gamedayName = '';
+          if (_liveSnap) {
+            _liveSnap.gamedays.forEach(function(gd) {
+              if (gd.games && gd.games.some(function(g) { return g.id === game.gameId; }))
+                gamedayName = gd.name || '';
+            });
+          }
+          var newGs = {
+            gameId: game.gameId,
+            homeName: fullGame.home.name,
+            awayName: fullGame.away.name,
+            watchedSide: watchedSide,
+            score: { home: fullGame.home.score, away: fullGame.away.score },
+            status: fullGame.status,
+            possession: fullGame.home.isInPossession ? 'home'
+                      : (fullGame.away.isInPossession ? 'away' : null),
+            ticks: fullGame.ticks.slice(),
+            seenFingerprints: new Set(
+              fullGame.ticks.map(function(t) { return t.text + '|' + t.time; })
+            ),
+            hasFullHistory: true,
+            gamedayName: gamedayName
+          };
+          _liveGames[game.gameId] = newGs;
+          var root = document.getElementById('root');
+          if (root) {
+            var wrapper = document.createElement('div');
+            wrapper.innerHTML = renderLiveGameB3(newGs);
+            root.insertBefore(wrapper.firstChild, root.firstChild);
+          }
+        }).catch(function() {});
+      });
+
+    }).catch(function() {
+      _liveFailCount++;
+      if (_liveFailCount >= 3) {
+        var root = document.getElementById('root');
+        if (root && !document.getElementById('lt-error-banner')) {
+          var errDiv = document.createElement('div');
+          errDiv.id        = 'lt-error-banner';
+          errDiv.className = 'lt-conn-error';
+          errDiv.textContent = '⚠ Verbindung unterbrochen';
+          root.insertBefore(errDiv, root.firstChild);
+        }
+      }
+    });
+  }
+
+  poll(); // immediate first call
+  _liveInterval = setInterval(poll, 5000);
+}
 
 async function renderSpielplan(root, cfg) {
   var elMap = {};
