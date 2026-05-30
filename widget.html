@@ -641,7 +641,7 @@ function renderLiveBanner(game, gd, teamId, liveUrl) {
     + '<div class="live-info">' + homeName + ' vs. ' + awayName
     + '<br><small>' + gdName + ' · ' + league + '</small></div>'
     + '<div id="sp-live-score-' + game.id + '" class="live-score">' + scoreStr + '</div>';
-  if (liveUrl) {
+  if (liveUrl && /^https?:\/\//.test(liveUrl)) {
     return '<a class="live-banner" href="' + escapeHtml(liveUrl) + '"'
       + ' target="_blank" rel="noopener noreferrer">' + inner + '</a>';
   }
