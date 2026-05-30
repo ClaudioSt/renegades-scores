@@ -328,6 +328,43 @@ function getTickPoints(text) {
   return 0;
 }
 
+function buildTickRows(gs) {
+  var ourName = gs.watchedSide === 'home' ? gs.homeName : gs.awayName;
+  var oppName = gs.watchedSide === 'home' ? gs.awayName : gs.homeName;
+  var runScore = { home: 0, away: 0 };
+  var ordered  = gs.ticks.slice().reverse(); // newest-first → oldest-first
+  return ordered.map(function(tick) {
+    if (tick.team === null) {
+      return '<tr class="lt-neutral"><td colspan="3">' + escapeHtml(tick.text) + '</td></tr>';
+    }
+    var pts = getTickPoints(tick.text);
+    if (pts > 0 && tick.team) runScore[tick.team] += pts;
+    var isOurSide = tick.team === gs.watchedSide;
+    var isScoring = pts > 0;
+    var rowClass  = isScoring ? ' class="lt-scoring"' : '';
+    var ourScore  = gs.watchedSide === 'home' ? runScore.home : runScore.away;
+    var oppScore  = gs.watchedSide === 'home' ? runScore.away : runScore.home;
+    var scoreCell = (isScoring && gs.hasFullHistory) ? escapeHtml(ourScore + ':' + oppScore) : '';
+    var label     = isScoring
+      ? '<span class="lt-team-label">' + escapeHtml(isOurSide ? ourName : oppName) + '</span>'
+      : '';
+    var evText = label + escapeHtml(tick.text);
+    if (isOurSide) {
+      return '<tr' + rowClass + '>'
+        + '<td class="lt-col-home">' + evText + '</td>'
+        + '<td class="lt-col-mid">' + scoreCell + '</td>'
+        + '<td class="lt-col-away"></td>'
+        + '</tr>';
+    } else {
+      return '<tr' + rowClass + '>'
+        + '<td class="lt-col-home"></td>'
+        + '<td class="lt-col-mid">' + scoreCell + '</td>'
+        + '<td class="lt-col-away">' + evText + '</td>'
+        + '</tr>';
+    }
+  }).join('');
+}
+
 function getResultClass(teamId, results) {
   var me    = results.find(function(r) { return r.team_id === teamId; });
   var other = results.find(function(r) { return r.team_id !== teamId; });
