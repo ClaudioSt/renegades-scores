@@ -225,6 +225,8 @@ var _watchedGameIds   = new Set();  // game.id values for watched teams' active 
 var _liveFailCount    = 0;          // consecutive poll failures
 var _liveTeamNames    = {};         // teamName → teamId, for mid-session new-game detection
 var _liveSnap         = null;       // snapshot stored by renderLiveView for polling use
+var _spielplanPollInterval = null;  // setInterval handle for spielplan live polling
+var _spielplanLiveIds      = new Set(); // game IDs being polled across all teams
 
 // Team logo paths (relative, served from logos/ directory)
 var TEAM_LOGOS = {
@@ -399,6 +401,17 @@ function _toggleGameDetail(mainEl) {
   var isOpen = _openDetail === detail;
   if (_openDetail) { _openDetail.hidden = true; _openDetail = null; }
   if (!isOpen) { detail.hidden = false; _openDetail = detail; }
+}
+
+function splitTodayGames(games, teamId) {
+  var forTeam = games.filter(function(g) {
+    return g.results.some(function(r) { return r.team_id === teamId; });
+  });
+  return {
+    live:     forTeam.filter(function(g) { return g.status === 'live'; }),
+    finished: forTeam.filter(function(g) { return g.status === 'beendet'; }),
+    upcoming: forTeam.filter(function(g) { return g.status !== 'live' && g.status !== 'beendet'; }),
+  };
 }
 
 // ── CACHE ────────────────────────────────────────────────────────────────────

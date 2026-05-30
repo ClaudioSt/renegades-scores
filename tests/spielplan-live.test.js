@@ -130,3 +130,70 @@ describe('renderLiveBanner', () => {
     assert.ok(!/<script/i.test(html), 'no script injection');
   });
 });
+
+// ─── splitTodayGames ─────────────────────────────────────────────────────────
+
+describe('splitTodayGames', () => {
+  let w;
+  beforeEach(() => { w = freshContext(); });
+
+  function makeGame(id, status) {
+    return {
+      id: id, status: status,
+      results: [
+        { team_id: 159, team_name: 'Nürn', isHome: true,  pa: 7 },
+        { team_id: 200, team_name: 'Other', isHome: false, pa: 14 }
+      ],
+      scheduled: '10:00:00', field: '1', stage: '', standing: '',
+      final_score: status === 'beendet' ? { home: 21, away: 14 } : null,
+      halftime_score: null
+    };
+  }
+
+  it('puts live games in live bucket', () => {
+    var result = w.splitTodayGames([makeGame(1, 'live')], 159);
+    assert.strictEqual(result.live.length, 1);
+    assert.strictEqual(result.finished.length, 0);
+    assert.strictEqual(result.upcoming.length, 0);
+  });
+
+  it('puts beendet games in finished bucket', () => {
+    var result = w.splitTodayGames([makeGame(2, 'beendet')], 159);
+    assert.strictEqual(result.finished.length, 1);
+    assert.strictEqual(result.live.length, 0);
+    assert.strictEqual(result.upcoming.length, 0);
+  });
+
+  it('puts scheduled games in upcoming bucket', () => {
+    var result = w.splitTodayGames([makeGame(3, 'Geplant')], 159);
+    assert.strictEqual(result.upcoming.length, 1);
+    assert.strictEqual(result.live.length, 0);
+    assert.strictEqual(result.finished.length, 0);
+  });
+
+  it('splits a mixed-status gameday correctly', () => {
+    var games = [
+      makeGame(10, 'live'),
+      makeGame(11, 'beendet'),
+      makeGame(12, 'Geplant'),
+    ];
+    var result = w.splitTodayGames(games, 159);
+    assert.strictEqual(result.live.length,     1);
+    assert.strictEqual(result.finished.length, 1);
+    assert.strictEqual(result.upcoming.length, 1);
+  });
+
+  it('excludes games not involving the watched teamId', () => {
+    var otherGame = {
+      id: 99, status: 'live',
+      results: [
+        { team_id: 1, team_name: 'A', isHome: true,  pa: 0 },
+        { team_id: 2, team_name: 'B', isHome: false, pa: 0 }
+      ],
+      scheduled: '10:00:00', field: '1', stage: '', standing: '',
+      final_score: null, halftime_score: null
+    };
+    var result = w.splitTodayGames([otherGame], 159);
+    assert.strictEqual(result.live.length, 0);
+  });
+});
