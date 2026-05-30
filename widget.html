@@ -332,9 +332,9 @@ function buildTickRows(gs) {
   var ourName = gs.watchedSide === 'home' ? gs.homeName : gs.awayName;
   var oppName = gs.watchedSide === 'home' ? gs.awayName : gs.homeName;
   var runScore = { home: 0, away: 0 };
-  var ordered  = gs.ticks.slice().reverse(); // newest-first → oldest-first
+  var ordered  = (gs.ticks || []).slice().reverse(); // newest-first → oldest-first
   return ordered.map(function(tick) {
-    if (tick.team === null) {
+    if (tick.team == null) {
       return '<tr class="lt-neutral"><td colspan="3">' + escapeHtml(tick.text) + '</td></tr>';
     }
     var pts = getTickPoints(tick.text);
