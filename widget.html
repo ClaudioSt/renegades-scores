@@ -349,8 +349,7 @@ function buildTickRows(gs) {
   var ourName = gs.watchedSide === 'home' ? gs.homeName : gs.awayName;
   var oppName = gs.watchedSide === 'home' ? gs.awayName : gs.homeName;
   var runScore = { home: 0, away: 0 };
-  var ordered  = (gs.ticks || []).slice().reverse(); // newest-first → oldest-first
-  return ordered.map(function(tick) {
+  return (gs.ticks || []).map(function(tick) {
     if (tick.team == null) {
       return '<tr class="lt-neutral"><td colspan="3">' + escapeHtml(tick.text) + '</td></tr>';
     }
@@ -379,7 +378,7 @@ function buildTickRows(gs) {
         + '<td class="lt-col-away">' + evText + '</td>'
         + '</tr>';
     }
-  }).join('');
+  }).reverse().join('');
 }
 
 function getResultClass(teamId, results) {
@@ -1030,7 +1029,7 @@ function startLivePolling() {
           var fp = tick.text + '|' + tick.time;
           if (!gs.seenFingerprints.has(fp)) {
             gs.seenFingerprints.add(fp);
-            gs.ticks.unshift(tick);  // maintain newest-first order in state
+            gs.ticks.push(tick);  // maintain oldest-first order in state
             newTicks.push(tick);
           }
         });
@@ -1099,7 +1098,7 @@ function startLivePolling() {
             status: fullGame.status,
             possession: fullGame.home.isInPossession ? 'home'
                       : (fullGame.away.isInPossession ? 'away' : null),
-            ticks: fullGame.ticks.slice(),
+            ticks: fullGame.ticks.slice().reverse(),
             seenFingerprints: new Set(
               fullGame.ticks.map(function(t) { return t.text + '|' + t.time; })
             ),
@@ -1207,7 +1206,7 @@ async function renderLiveView(root, cfg) {
           status:           game.status,
           possession:       game.home.isInPossession ? 'home'
                           : (game.away.isInPossession ? 'away' : null),
-          ticks:            game.ticks.slice(),
+          ticks:            game.ticks.slice().reverse(),
           seenFingerprints: new Set(
             game.ticks.map(function(t) { return t.text + '|' + t.time; })
           ),
