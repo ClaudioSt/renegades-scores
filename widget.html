@@ -627,19 +627,26 @@ function renderUpcomingFallback(teamId, snap) {
     + renderGamedayCard(gd, gd.games, teamId, false);
 }
 
-function renderLiveBanner(game, gd, teamId) {
+function renderLiveBanner(game, gd, teamId, liveUrl) {
   var home = game.results.find(function(r) { return r.isHome; });
   var away = game.results.find(function(r) { return !r.isHome; });
   if (!home || !away) return '';
-  var homeName  = escapeHtml(resolveTeamName(home.team_name));
-  var awayName  = escapeHtml(resolveTeamName(away.team_name));
-  var gdName    = escapeHtml(gd.name);
-  var league    = escapeHtml(gd.league_display || '');
+  var homeName = escapeHtml(resolveTeamName(home.team_name));
+  var awayName = escapeHtml(resolveTeamName(away.team_name));
+  var gdName   = escapeHtml(gd.name);
+  var league   = escapeHtml(gd.league_display || '');
+  var hs       = game.halftime_score;
+  var scoreStr = (hs && hs.home != null && hs.away != null) ? hs.home + ' : ' + hs.away : '– : –';
+  var inner = '<span class="live-badge">● LIVE</span>'
+    + '<div class="live-info">' + homeName + ' vs. ' + awayName
+    + '<br><small>' + gdName + ' · ' + league + '</small></div>'
+    + '<div id="sp-live-score-' + game.id + '" class="live-score">' + scoreStr + '</div>';
+  if (liveUrl) {
+    return '<a class="live-banner" href="' + escapeHtml(liveUrl) + '"'
+      + ' target="_blank" rel="noopener noreferrer">' + inner + '</a>';
+  }
   var tickerUrl = LIVETICKER_BASE + '?gameday=' + encodeURIComponent(gd.id);
-  return '<div class="live-banner">'
-    + '<span class="live-badge">● LIVE</span>'
-    + '<div class="live-info">' + homeName + ' vs. ' + awayName + '<br><small>' + gdName + ' · ' + league + '</small></div>'
-    + '<div class="live-score">' + (function(hs){ return (hs && hs.home != null && hs.away != null) ? hs.home + ' : ' + hs.away : '– : –'; })(game.halftime_score) + '</div>'
+  return '<div class="live-banner">' + inner
     + '<a href="' + tickerUrl + '" target="_blank">🔴 Liveticker</a>'
     + '</div>';
 }
