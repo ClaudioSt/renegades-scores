@@ -1054,6 +1054,101 @@ function startLivePolling() {
   _liveInterval = setInterval(poll, 5000);
 }
 
+async function renderLiveView(root, cfg) {
+  root.innerHTML = '<div class="loading">Lade Live-Daten…</div>';
+  try {
+    var snap = await loadSnapshot();
+    _liveSnap = snap;
+    var today = new Date().toISOString().slice(0, 10);
+
+    // Build teamId → name map and populate _liveTeamNames
+    var teamNames = {};
+    snap.teams.forEach(function(t) { teamNames[t.id] = t.name; });
+    _liveTeamNames = {};
+    cfg.teams.forEach(function(teamId) {
+      var name = teamNames[teamId];
+      if (name) _liveTeamNames[name] = teamId;
+    });
+
+    // Collect active game IDs for watched teams from snapshot
+    _watchedGameIds = new Set();
+    var gameIdToTeamId = {};
+    snap.gamedays.forEach(function(gd) {
+      if (!gd.games) return;
+      cfg.teams.forEach(function(teamId) {
+        var teamGames = gd.games.filter(function(g) {
+          return g.results.some(function(r) { return r.team_id === teamId; });
+        });
+        if (!teamGames.length) return;
+        if (classifyGameday(gd, gd.games, teamId, today) !== 'active') return;
+        teamGames.forEach(function(g) {
+          _watchedGameIds.add(g.id);
+          if (!gameIdToTeamId[g.id]) gameIdToTeamId[g.id] = teamId;
+        });
+      });
+    });
+
+    if (_watchedGameIds.size === 0) {
+      root.innerHTML = cfg.teams.map(function(teamId) {
+        return renderUpcomingFallback(teamId, snap);
+      }).join('');
+      return;
+    }
+
+    // Fetch full tick history for each watched game via getAllTicksFor
+    var liveHtml    = '';
+    var fallbackHtml = '';
+    await Promise.all(Array.from(_watchedGameIds).map(async function(gameId) {
+      var teamId = gameIdToTeamId[gameId];
+      try {
+        var data = await fetchJSON(LIVETICKER_API + '?getAllTicksFor=' + gameId);
+        var game = data.find(function(g) { return g.gameId === gameId; });
+        if (!game) {
+          // Scheduled but not yet started in liveticker
+          fallbackHtml += renderUpcomingFallback(teamId, snap);
+          return;
+        }
+        var teamName    = teamNames[teamId] || '';
+        var watchedSide = (game.home.name === teamName) ? 'home' : 'away';
+        var gamedayName = '';
+        snap.gamedays.forEach(function(gd) {
+          if (gd.games && gd.games.some(function(g) { return g.id === gameId; }))
+            gamedayName = gd.name || '';
+        });
+        var gs = {
+          gameId:           gameId,
+          homeName:         game.home.name,
+          awayName:         game.away.name,
+          watchedSide:      watchedSide,
+          score:            { home: game.home.score, away: game.away.score },
+          status:           game.status,
+          possession:       game.home.isInPossession ? 'home'
+                          : (game.away.isInPossession ? 'away' : null),
+          ticks:            game.ticks.slice(),
+          seenFingerprints: new Set(
+            game.ticks.map(function(t) { return t.text + '|' + t.time; })
+          ),
+          hasFullHistory:   true,
+          gamedayName:      gamedayName
+        };
+        _liveGames[gameId] = gs;
+        liveHtml += renderLiveGameB3(gs);
+      } catch(e) {
+        // getAllTicksFor failed — fall back to upcoming
+        fallbackHtml += renderUpcomingFallback(teamId, snap);
+      }
+    }));
+
+    root.innerHTML = (liveHtml + fallbackHtml)
+      || '<div class="no-data">Keine Spiele gefunden.</div>';
+
+    if (Object.keys(_liveGames).length) startLivePolling();
+
+  } catch(e) {
+    root.innerHTML = '<div class="error-banner">Fehler: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
 async function renderSpielplan(root, cfg) {
   var elMap = {};
   cfg.teams.forEach(function(teamId) {
@@ -1254,7 +1349,9 @@ async function renderTableView(root, cfg) {
 
   var root = document.getElementById('root');
 
-  if (cfg.view === 'table') {
+  if (cfg.view === 'live') {
+    await renderLiveView(root, cfg);
+  } else if (cfg.view === 'table') {
     await renderTableView(root, cfg);
   } else {
     await renderSpielplan(root, cfg);
