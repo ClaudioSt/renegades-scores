@@ -1,6 +1,9 @@
 # Playwright browser test artifacts
 .playwright-mcp/
 
+# Brainstorm session files
+.superpowers/
+
 # Node
 node_modules/
 
