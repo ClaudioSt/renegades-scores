@@ -1102,14 +1102,18 @@ async function renderLiveView(root, cfg) {
     }
 
     // Fetch full tick history for each watched game via getAllTicksFor
-    var liveHtml = '';
-    var teamsWithLiveGame = new Set();
+    var liveHtml    = '';
+    var fallbackHtml = '';
     await Promise.all(Array.from(_watchedGameIds).map(async function(gameId) {
       var teamId = gameIdToTeamId[gameId];
       try {
         var data = await fetchJSON(LIVETICKER_API + '?getAllTicksFor=' + gameId);
         var game = data.find(function(g) { return g.gameId === gameId; });
-        if (!game || (game.status !== '1. Halbzeit' && game.status !== '2. Halbzeit')) return;
+        if (!game) {
+          // Scheduled but not yet started in liveticker
+          fallbackHtml += renderUpcomingFallback(teamId, snap);
+          return;
+        }
         var teamName    = teamNames[teamId] || '';
         var watchedSide = (game.home.name === teamName) ? 'home' : 'away';
         var gamedayName = '';
@@ -1135,14 +1139,11 @@ async function renderLiveView(root, cfg) {
         };
         _liveGames[gameId] = gs;
         liveHtml += renderLiveGameB3(gs);
-        teamsWithLiveGame.add(teamId);
-      } catch(e) { /* swallow — team gets fallback below */ }
+      } catch(e) {
+        // getAllTicksFor failed — spec calls for incremental-only fallback; using upcoming as simpler alternative
+        fallbackHtml += renderUpcomingFallback(teamId, snap);
+      }
     }));
-
-    var fallbackHtml = cfg.teams
-      .filter(function(teamId) { return !teamsWithLiveGame.has(teamId); })
-      .map(function(teamId) { return renderUpcomingFallback(teamId, snap); })
-      .join('');
 
     root.innerHTML = (liveHtml + fallbackHtml)
       || '<div class="no-data">Keine Spiele gefunden.</div>';
