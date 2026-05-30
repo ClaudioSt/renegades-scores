@@ -19,14 +19,14 @@ describe('getTickPoints', () => {
   it('returns 1 for 1-Extra-Punkt with player', () => {
     assert.strictEqual(w.getTickPoints('1-Extra-Punkt: #7'), 1);
   });
-  it('returns 1 for 1-Extra-Punkt with dash', () => {
-    assert.strictEqual(w.getTickPoints('1-Extra-Punkt: -'), 1);
+  it('returns 0 for 1-Extra-Punkt with dash (no attempt)', () => {
+    assert.strictEqual(w.getTickPoints('1-Extra-Punkt: -'), 0);
   });
   it('returns 2 for 2-Extra-Punkte with player', () => {
     assert.strictEqual(w.getTickPoints('2-Extra-Punkte: #3'), 2);
   });
-  it('returns 2 for 2-Extra-Punkte with dash', () => {
-    assert.strictEqual(w.getTickPoints('2-Extra-Punkte: -'), 2);
+  it('returns 0 for 2-Extra-Punkte with dash (no attempt)', () => {
+    assert.strictEqual(w.getTickPoints('2-Extra-Punkte: -'), 0);
   });
   it('returns 0 for First Down', () => {
     assert.strictEqual(w.getTickPoints('First Down: #5'), 0);

@@ -339,8 +339,8 @@ function formatDate(dateStr) {
 
 function getTickPoints(text) {
   if (text.startsWith('Touchdown'))      return 6;
-  if (text.startsWith('2-Extra-Punkte')) return 2;
-  if (text.startsWith('1-Extra-Punkt'))  return 1;
+  if (text.startsWith('2-Extra-Punkte')) return /: -$/.test(text) ? 0 : 2;
+  if (text.startsWith('1-Extra-Punkt'))  return /: -$/.test(text) ? 0 : 1;
   return 0;
 }
 
@@ -1171,43 +1171,36 @@ async function renderLiveView(root, cfg) {
       return;
     }
 
-    // Fetch full tick history for each watched game via getAllTicksFor
     var liveHtml    = '';
     var fallbackHtml = '';
-    await Promise.all(Array.from(_watchedGameIds).map(async function(gameId) {
+    var allData = await fetchJSON(LIVETICKER_API);
+    Array.from(_watchedGameIds).forEach(function(gameId) {
       var teamId = gameIdToTeamId[gameId];
-      try {
-        var data = await fetchJSON(LIVETICKER_API + '?getAllTicksFor=' + gameId);
-        var game = data.find(function(g) { return g.gameId === gameId; });
-        if (!game) {
-          // Scheduled but not yet started in liveticker
-          fallbackHtml += renderUpcomingFallback(teamId, snap);
-          return;
-        }
-        var teamName    = teamNames[teamId] || '';
-        var watchedSide = (game.home.name === teamName) ? 'home' : 'away';
-        var gs = {
-          gameId:           gameId,
-          homeName:         game.home.name,
-          awayName:         game.away.name,
-          watchedSide:      watchedSide,
-          score:            { home: game.home.score, away: game.away.score },
-          status:           game.status,
-          possession:       game.home.isInPossession ? 'home'
-                          : (game.away.isInPossession ? 'away' : null),
-          ticks:            game.ticks.slice().reverse(),
-          seenFingerprints: new Set(
-            game.ticks.map(function(t) { return t.text + '|' + t.time; })
-          ),
-          hasFullHistory:   true
-        };
-        _liveGames[gameId] = gs;
-        liveHtml += renderLiveGameB3(gs);
-      } catch(e) {
-        // getAllTicksFor failed — spec calls for incremental-only fallback; using upcoming as simpler alternative
+      var game = allData.find(function(g) { return g.gameId === gameId; });
+      if (!game) {
         fallbackHtml += renderUpcomingFallback(teamId, snap);
+        return;
       }
-    }));
+      var teamName    = teamNames[teamId] || '';
+      var watchedSide = (game.home.name === teamName) ? 'home' : 'away';
+      var gs = {
+        gameId:           gameId,
+        homeName:         game.home.name,
+        awayName:         game.away.name,
+        watchedSide:      watchedSide,
+        score:            { home: game.home.score, away: game.away.score },
+        status:           game.status,
+        possession:       game.home.isInPossession ? 'home'
+                        : (game.away.isInPossession ? 'away' : null),
+        ticks:            game.ticks.slice().reverse(),
+        seenFingerprints: new Set(
+          game.ticks.map(function(t) { return t.text + '|' + t.time; })
+        ),
+        hasFullHistory:   true
+      };
+      _liveGames[gameId] = gs;
+      liveHtml += renderLiveGameB3(gs);
+    });
 
     root.innerHTML = (liveHtml + fallbackHtml)
       || '<div class="no-data">Keine Spiele gefunden.</div>';
