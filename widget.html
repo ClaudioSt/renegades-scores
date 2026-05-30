@@ -1006,6 +1006,16 @@ function startSpielplanPolling(newGameIds) {
   _spielplanPollInterval = setInterval(poll, 30000);
 }
 
+function finishGame(gs) {
+  var el = document.getElementById('lt-game-' + gs.gameId);
+  if (el) el.parentNode.removeChild(el);
+  delete _liveGames[gs.gameId];
+  if (Object.keys(_liveGames).length === 0 && _liveInterval) {
+    clearInterval(_liveInterval);
+    _liveInterval = null;
+  }
+}
+
 function startLivePolling() {
   _liveFailCount = 0;
 
@@ -1060,17 +1070,10 @@ function startLivePolling() {
           if (bodyEl) bodyEl.innerHTML = buildTickRows(gs);
         }
 
-        // Check if all watched games are finished → stop polling
-        if (game.status === 'Beendet') {
-          gs.status = 'Beendet';
-          var allDone = Object.keys(_liveGames).every(function(id) {
-            return _liveGames[id].status === 'Beendet';
-          });
-          if (allDone && _liveInterval) {
-            clearInterval(_liveInterval);
-            _liveInterval = null;
-          }
-        }
+        // Check if game is finished — by API status or "Spiel beendet" tick
+        var isOver = game.status === 'Beendet'
+          || gs.ticks.some(function(t) { return t.team == null && t.text === 'Spiel beendet'; });
+        if (isOver) finishGame(gs);
       });
 
       // Detect new live games that started after page load
