@@ -90,13 +90,16 @@ Renders a single live game as a two-column table. Called on first load and when 
 ### `renderUpcomingFallback(teamId, snap)`
 Shown when no live games detected for a watched team. Finds the earliest active gameday from snapshot for that team and renders it via the existing `renderGamedayCard(gd, games, teamId, false)`. Topped by a small label: `"Kein Live-Spiel — nächstes Spiel:"`.
 
+**No polling starts in fallback mode.** If the page loads before a game begins, the user must reload to activate the live view. This is acceptable for the iframe embed use case.
+
 ---
 
 ## State
 
 ```js
-var _liveGames = {};     // gameId → gameState
+var _liveGames = {};         // gameId → gameState
 var _liveInterval = null;
+var _watchedGameIds = new Set();  // game IDs for watched teams' active gamedays (built during init)
 
 // gameState shape:
 {
@@ -120,7 +123,7 @@ var _liveInterval = null;
 - **Filter:** `game.gameId` must be in `_watchedGameIds` (Set built during init)
 - **Tick deduplication:**
   - Primary: fingerprint `text + '|' + time` checked against `seenFingerprints`
-  - Guard: if API returns more ticks than `seenFingerprints.size`, extras appended in order (handles identical-fingerprint events, e.g. two First Downs same minute)
+  - Guard: if API returns more ticks than `seenFingerprints.size`, extras appended oldest-first (API returns newest-first, so process reversed; handles identical-fingerprint events, e.g. two First Downs same minute)
 - **DOM updates:** targeted — only score cell and ticks `<tbody>` replaced on change; score cell gets a brief CSS flash animation on score change
 - **New game mid-session:** if poll returns a `gameId` not in `_liveGames`, fetch full history via `getAllTicksFor`, add to state, append new game block to DOM
 - **Game over:** when `status === 'Beendet'` for all watched games, `clearInterval(_liveInterval)` and do a final static render
