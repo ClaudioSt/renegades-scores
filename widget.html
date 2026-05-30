@@ -1009,6 +1009,7 @@ function startSpielplanPolling(newGameIds) {
 function finishGame(gs) {
   var el = document.getElementById('lt-game-' + gs.gameId);
   if (el) el.parentNode.removeChild(el);
+  _watchedGameIds.delete(gs.gameId);
   delete _liveGames[gs.gameId];
   if (Object.keys(_liveGames).length === 0 && _liveInterval) {
     clearInterval(_liveInterval);
@@ -1083,13 +1084,6 @@ function startLivePolling() {
           var fullGame = fullData.find(function(g) { return g.gameId === game.gameId; });
           if (!fullGame) return;
           var watchedSide = _liveTeamNames[fullGame.home.name] ? 'home' : 'away';
-          var gamedayName = '';
-          if (_liveSnap) {
-            _liveSnap.gamedays.forEach(function(gd) {
-              if (gd.games && gd.games.some(function(g) { return g.id === game.gameId; }))
-                gamedayName = gd.name || '';
-            });
-          }
           var newGs = {
             gameId: game.gameId,
             homeName: fullGame.home.name,
@@ -1103,8 +1097,7 @@ function startLivePolling() {
             seenFingerprints: new Set(
               fullGame.ticks.map(function(t) { return t.text + '|' + t.time; })
             ),
-            hasFullHistory: true,
-            gamedayName: gamedayName
+            hasFullHistory: true
           };
           _liveGames[game.gameId] = newGs;
           var root = document.getElementById('root');
@@ -1193,11 +1186,6 @@ async function renderLiveView(root, cfg) {
         }
         var teamName    = teamNames[teamId] || '';
         var watchedSide = (game.home.name === teamName) ? 'home' : 'away';
-        var gamedayName = '';
-        snap.gamedays.forEach(function(gd) {
-          if (gd.games && gd.games.some(function(g) { return g.id === gameId; }))
-            gamedayName = gd.name || '';
-        });
         var gs = {
           gameId:           gameId,
           homeName:         game.home.name,
@@ -1211,8 +1199,7 @@ async function renderLiveView(root, cfg) {
           seenFingerprints: new Set(
             game.ticks.map(function(t) { return t.text + '|' + t.time; })
           ),
-          hasFullHistory:   true,
-          gamedayName:      gamedayName
+          hasFullHistory:   true
         };
         _liveGames[gameId] = gs;
         liveHtml += renderLiveGameB3(gs);
