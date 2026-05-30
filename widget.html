@@ -192,6 +192,18 @@
     }
     @keyframes lt-flash { 0% { background: rgba(255,69,0,0.25); } 100% { background: transparent; } }
     .lt-flash { animation: lt-flash 0.8s ease-out; }
+    /* live-banner as clickable link */
+    a.live-banner {
+      display: flex;
+      text-decoration: none;
+      color: inherit;
+      cursor: pointer;
+    }
+    a.live-banner:hover {
+      background: rgba(255, 69, 0, 0.08);
+      box-shadow: inset 3px 0 0 var(--accent);
+      transition: background 0.15s;
+    }
   </style>
 </head>
 <body>
