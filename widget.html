@@ -1354,13 +1354,13 @@ async function renderLiveView(root, cfg) {
 }
 
 async function renderSpielplan(root, cfg) {
+  // Build team DOM blocks
   var elMap = {};
   cfg.teams.forEach(function(teamId) {
     var block = document.createElement('div');
     block.className = 'team-block';
     block.innerHTML =
       (cfg.showTitle ? '<div class="team-title" id="t-title-' + teamId + '"></div>' : '')
-      + '<div id="t-live-' + teamId + '"></div>'
       + (cfg.showFuture
           ? '<div id="t-future-' + teamId + '"><div class="loading">Lade Daten…</div></div>'
           : '')
@@ -1370,43 +1370,106 @@ async function renderSpielplan(root, cfg) {
     root.appendChild(block);
     elMap[teamId] = {
       title:  document.getElementById('t-title-'  + teamId),
-      live:   document.getElementById('t-live-'   + teamId),
       past:   document.getElementById('t-past-'   + teamId),
       future: document.getElementById('t-future-' + teamId),
     };
   });
 
-  await Promise.all(cfg.teams.map(async function(teamId) {
-    try {
-      await loadTeam(teamId, elMap[teamId], cfg);
-    } catch(err) {
-      console.error('Widget error (team ' + teamId + '):', err);
-      var errBanner = '<div class="error-banner">Fehler beim Laden: ' + escapeHtml(err.message) + '</div>';
-      if (elMap[teamId].future) elMap[teamId].future.innerHTML = errBanner;
-      if (elMap[teamId].past && elMap[teamId].past.querySelector('.loading'))
-        elMap[teamId].past.innerHTML = errBanner;
-    }
-  }));
+  // Subscribe to snapshot, then render
+  DataStore.subscribe('snapshot-loaded', function(snap) {
+    var today = new Date().toISOString().slice(0, 10);
+    cfg.teams.forEach(function(teamId) {
+      var els = elMap[teamId];
+      var forTeam = snap.gamedays.filter(function(gd) {
+        return gd.games && gd.games.some(function(g) {
+          return g.results.some(function(r) { return r.team_id === teamId; });
+        });
+      });
+      var past = forTeam
+        .filter(function(gd) { return gd.date < today; })
+        .sort(function(a, b) { return b.date.localeCompare(a.date); })
+        .map(function(gd) { return { id: gd.id, gd: gd, games: gd.games }; });
+      var future = forTeam
+        .filter(function(gd) { return gd.date >= today; })
+        .sort(function(a, b) { return a.date.localeCompare(b.date); })
+        .map(function(gd) { return { id: gd.id, gd: gd, games: gd.games }; });
 
+      var snapTeam = snap.teams.find(function(t) { return t.id === teamId; });
+      if (els.title && snapTeam) els.title.textContent = snapTeam.name;
+      if (els.past)   els.past.innerHTML   = renderPastSection(past, teamId, cfg.past);
+      if (els.future) els.future.innerHTML = renderFutureSection(future, teamId, 0);
+    });
+  });
+
+  // Subscribe to live score updates
+  DataStore.subscribe('game-score-update', function(data) {
+    var el = document.getElementById('score-' + data.gameId);
+    if (!el) return;
+    el.innerHTML =
+      '<span class="score-home">' + escapeHtml(String(data.homeScore)) + '</span>'
+      + '<span class="score-sep">:</span>'
+      + '<span class="score-away">' + escapeHtml(String(data.awayScore)) + '</span>';
+  });
+
+  DataStore.subscribe('game-finished', function(data) {
+    var el = document.getElementById('score-' + data.gameId);
+    if (el) el.classList.add('score-final');
+    var badge = document.getElementById('live-badge-' + data.gameId);
+    if (badge) badge.parentNode && badge.parentNode.removeChild(badge);
+  });
+
+  // Click delegation — "Weitere laden" and future toggle
   root.addEventListener('click', function(e) {
+    var snap = DataStore.snapshot;
+    if (!snap) return;
+    var today = new Date().toISOString().slice(0, 10);
+
     var btn = e.target.closest('.load-more');
     if (btn) {
       var teamId     = parseInt(btn.getAttribute('data-team'), 10);
       var newVisible = parseInt(btn.getAttribute('data-visible'), 10) + 3;
-      var pastEl = document.getElementById('t-past-' + teamId);
-      if (!pastEl || !_pastCache[teamId]) return;
-      pastEl.innerHTML = renderPastSection(_pastCache[teamId], teamId, newVisible);
+      var pastEl     = document.getElementById('t-past-' + teamId);
+      if (!pastEl) return;
+      var past = snap.gamedays
+        .filter(function(gd) {
+          return gd.date < today && gd.games && gd.games.some(function(g) {
+            return g.results.some(function(r) { return r.team_id === teamId; });
+          });
+        })
+        .sort(function(a, b) { return b.date.localeCompare(a.date); })
+        .map(function(gd) { return { id: gd.id, gd: gd, games: gd.games }; });
+      pastEl.innerHTML = renderPastSection(past, teamId, newVisible);
       return;
     }
+
     var fBtn = e.target.closest('.toggle-more-future');
     if (fBtn) {
       var teamId     = parseInt(fBtn.getAttribute('data-team'), 10);
       var newVisible = parseInt(fBtn.getAttribute('data-visible'), 10) + 3;
       var futureEl   = document.getElementById('t-future-' + teamId);
-      if (!futureEl || !_futureCache[teamId]) return;
-      futureEl.innerHTML = renderFutureSection(_futureCache[teamId], teamId, newVisible);
+      if (!futureEl) return;
+      var future = snap.gamedays
+        .filter(function(gd) {
+          return gd.date >= today && gd.games && gd.games.some(function(g) {
+            return g.results.some(function(r) { return r.team_id === teamId; });
+          });
+        })
+        .sort(function(a, b) { return a.date.localeCompare(b.date); })
+        .map(function(gd) { return { id: gd.id, gd: gd, games: gd.games }; });
+      futureEl.innerHTML = renderFutureSection(future, teamId, newVisible);
     }
   });
+
+  try {
+    await DataStore.init(cfg);
+  } catch(err) {
+    cfg.teams.forEach(function(teamId) {
+      var els = elMap[teamId];
+      var errBanner = '<div class="error-banner">Fehler beim Laden: ' + escapeHtml(err.message) + '</div>';
+      if (els.future) els.future.innerHTML = errBanner;
+      if (els.past)   els.past.innerHTML   = errBanner;
+    });
+  }
 }
 
 function renderStandingsTable(entry, teamIds) {
