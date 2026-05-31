@@ -307,6 +307,19 @@ describe('team registry: abbreviation lookup', () => {
   });
 });
 
+// ─── Future games: no log on unfinished games ────────────────────────────────
+
+describe('snapshot.json future games', () => {
+  it('no game with null final_score has a log field', () => {
+    const gamesWithLog = snap.gamedays.flatMap(gd => gd.games || [])
+      .filter(g => g.final_score === null && g.log != null);
+    assert.equal(
+      gamesWithLog.length, 0,
+      'games without a final_score must not have a log field'
+    );
+  });
+});
+
 // ─── Standings block ──────────────────────────────────────────────────────────
 
 describe('snapshot.json standings', () => {
