@@ -1524,6 +1524,22 @@ function _renderStandingsForYear(allEntries, year, teams) {
   return html || '<div class="standings-empty">Keine Tabellendaten für ' + escapeHtml(String(year)) + '.</div>';
 }
 
+function _groupLeaguesFromSnapshot(snap, teamIds) {
+  var leagueMap = {};
+  (snap.gamedays || []).forEach(function(gd) {
+    var teamPlays = gd.games && gd.games.some(function(g) {
+      return g.results.some(function(r) { return teamIds.indexOf(r.team_id) >= 0; });
+    });
+    if (!teamPlays) return;
+    var key = (gd.league_display || 'Unbekannt');
+    if (!leagueMap[key]) leagueMap[key] = [];
+    leagueMap[key].push(gd);
+  });
+  return Object.keys(leagueMap).sort().map(function(league) {
+    return { league: league, gamedays: leagueMap[league] };
+  });
+}
+
 async function renderTableView(root, cfg) {
   root.innerHTML = '<div class="loading">Lade Tabelle…</div>';
   var snap = await loadSnapshot();

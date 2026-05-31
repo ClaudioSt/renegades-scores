@@ -1125,3 +1125,41 @@ describe('renderStandingsTable row IDs', () => {
     assert.ok(!html.includes('standings-live-badge'), 'non-live team must not have badge');
   });
 });
+
+// ─── Table: league grouping from snapshot ─────────────────────────────────────
+
+describe('_groupLeaguesFromSnapshot', () => {
+  let w;
+  beforeEach(() => { w = freshContext(); });
+
+  it('returns unique league_display values for a given team', () => {
+    const snap = {
+      gamedays: [
+        { id: 1, date: '2026-03-01', league_display: 'DKB DFFL', games: [
+          { id: 10, status: 'Beendet', final_score: '14:7', results: [
+            { team_id: 159, team_name: 'Nürn', pa: 7,  isHome: true  },
+            { team_id: 200, team_name: 'Opp',  pa: 14, isHome: false },
+          ]},
+        ]},
+        { id: 2, date: '2026-04-01', league_display: 'DKB DFFL', games: [
+          { id: 11, status: 'Beendet', final_score: '21:0', results: [
+            { team_id: 159, team_name: 'Nürn', pa: 0,  isHome: false },
+            { team_id: 201, team_name: 'Opp2', pa: 21, isHome: true  },
+          ]},
+        ]},
+        { id: 3, date: '2026-05-01', league_display: 'FF BL', games: [
+          { id: 12, status: 'Beendet', final_score: '7:7', results: [
+            { team_id: 287, team_name: 'Nürn2', pa: 7, isHome: true  },
+            { team_id: 202, team_name: 'Opp3',  pa: 7, isHome: false },
+          ]},
+        ]},
+      ],
+    };
+    const leagues = w._groupLeaguesFromSnapshot(snap, [159]);
+    assert.ok(Array.isArray(leagues), 'should return an array');
+    assert.equal(leagues.length, 1, 'team 159 is only in DKB DFFL');
+    assert.equal(leagues[0].league, 'DKB DFFL');
+    assert.ok(Array.isArray(leagues[0].gamedays), 'should have gamedays array');
+    assert.equal(leagues[0].gamedays.length, 2);
+  });
+});
