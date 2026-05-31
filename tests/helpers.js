@@ -50,6 +50,8 @@ function loadWidgetContext(overrides) {
     Math, Number, String, JSON, Date, Set, Array, Object,
     parseInt, parseFloat, Error, Boolean, isNaN, isFinite,
     Promise, setTimeout, clearTimeout, console,
+    setInterval:  (fn, ms) => { void ms; return 1; },
+    clearInterval: () => {},
 
     // Minimal DOM stubs (render functions only build strings, no real DOM access)
     window: {
