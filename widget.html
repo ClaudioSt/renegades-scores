@@ -1270,86 +1270,85 @@ function startLivePolling() {
 }
 
 async function renderLiveView(root, cfg) {
-  root.innerHTML = '<div class="loading">Lade Live-Daten…</div>';
-  _liveGames = {};
+  // Reset any existing global live state
+  _liveGames     = {};
   if (_liveInterval) { clearInterval(_liveInterval); _liveInterval = null; }
-  try {
-    var snap = await loadSnapshot();
-    _liveSnap = snap;
-    var today = new Date().toISOString().slice(0, 10);
 
-    // Build teamId → name map and populate _liveTeamNames
-    var teamNames = {};
-    snap.teams.forEach(function(t) { teamNames[t.id] = t.name; });
-    _liveTeamNames = {};
-    cfg.teams.forEach(function(teamId) {
-      var name = teamNames[teamId];
-      if (name) _liveTeamNames[name] = teamId;
-    });
+  root.innerHTML = '<div class="lt-empty">Kein Live-Spiel gerade.</div>';
 
-    // Collect active game IDs for watched teams from snapshot
-    _watchedGameIds = new Set();
-    var gameIdToTeamId = {};
-    snap.gamedays.forEach(function(gd) {
-      if (!gd.games) return;
-      cfg.teams.forEach(function(teamId) {
-        var teamGames = gd.games.filter(function(g) {
-          return g.results.some(function(r) { return r.team_id === teamId; });
+  DataStore.subscribe('ticks-update', function(data) {
+    var gameId   = data.gameId;
+    var newTicks = data.newTicks;
+
+    var cardEl = document.getElementById('lt-game-' + gameId);
+    if (!cardEl) {
+      // First tick for this game: build game state and render card
+      var snap = DataStore.snapshot;
+      var snapGame = null;
+      if (snap) {
+        snap.gamedays.forEach(function(gd) {
+          (gd.games || []).forEach(function(g) { if (g.id === gameId) snapGame = g; });
         });
-        if (!teamGames.length) return;
-        if (classifyGameday(gd, gd.games, teamId, today) !== 'active') return;
-        teamGames.forEach(function(g) {
-          _watchedGameIds.add(g.id);
-          if (!gameIdToTeamId[g.id]) gameIdToTeamId[g.id] = teamId;
-        });
-      });
-    });
-
-    if (_watchedGameIds.size === 0) {
-      root.innerHTML = cfg.teams.map(function(teamId) {
-        return renderUpcomingFallback(teamId, snap);
-      }).join('');
-      return;
-    }
-
-    var liveHtml    = '';
-    var fallbackHtml = '';
-    var allData = await fetchJSON(LIVETICKER_API);
-    Array.from(_watchedGameIds).forEach(function(gameId) {
-      var teamId = gameIdToTeamId[gameId];
-      var game = allData.find(function(g) { return g.gameId === gameId; });
-      if (!game) {
-        fallbackHtml += renderUpcomingFallback(teamId, snap);
-        return;
       }
-      var teamName    = teamNames[teamId] || '';
-      var watchedSide = (game.home.name === teamName) ? 'home' : 'away';
+      if (!snapGame) return;
+
+      var homeRes = snapGame.results.find(function(r) { return r.isHome; })  || {};
+      var awayRes = snapGame.results.find(function(r) { return !r.isHome; }) || {};
+
+      var watchedSide = cfg.teams.some(function(tid) { return tid === homeRes.team_id; }) ? 'home' : 'away';
+
       var gs = {
-        gameId:           gameId,
-        homeName:         game.home.name,
-        awayName:         game.away.name,
-        watchedSide:      watchedSide,
-        score:            { home: game.home.score, away: game.away.score },
-        status:           game.status,
-        possession:       game.home.isInPossession ? 'home'
-                        : (game.away.isInPossession ? 'away' : null),
-        ticks:            game.ticks.slice().reverse(),
-        seenFingerprints: new Set(
-          game.ticks.map(function(t) { return t.text + '|' + t.time; })
-        ),
-        hasFullHistory:   true
+        gameId:       gameId,
+        homeName:     homeRes.team_name || '',
+        awayName:     awayRes.team_name || '',
+        homeLogo:     TEAM_LOGOS[homeRes.team_id] || '',
+        awayLogo:     TEAM_LOGOS[awayRes.team_id] || '',
+        watchedSide:  watchedSide,
+        score:        { home: null, away: null },
+        status:       '',
+        possession:   null,
+        ticks:        DataStore.ticks[gameId] || [],
+        hasFullHistory: false,
       };
       _liveGames[gameId] = gs;
-      liveHtml += renderLiveGameB3(gs);
-    });
 
-    root.innerHTML = (liveHtml + fallbackHtml)
-      || '<div class="no-data">Keine Spiele gefunden.</div>';
+      // Remove empty state if present
+      var emptyEl = root.querySelector('.lt-empty');
+      if (emptyEl) root.removeChild(emptyEl);
 
-    if (Object.keys(_liveGames).length) startLivePolling();
+      var wrapper = document.createElement('div');
+      wrapper.innerHTML = renderLiveGameB3(gs);
+      root.insertBefore(wrapper.firstChild, root.firstChild);
+    } else {
+      // Subsequent ticks: prepend new tick rows
+      var gs = _liveGames[gameId];
+      if (!gs) return;
+      gs.ticks = DataStore.ticks[gameId] || [];
+      var ticksEl = document.getElementById('lt-body-' + gameId);
+      if (ticksEl) {
+        var newRows = newTicks.map(function(tick) {
+          var tmpGs = Object.assign({}, gs, { ticks: [tick], hasFullHistory: false });
+          return buildTickRows(tmpGs);
+        }).join('');
+        // safe — buildTickRows uses escapeHtml internally
+        ticksEl.insertAdjacentHTML('afterbegin', newRows);
+      }
+    }
+  });
 
+  DataStore.subscribe('game-finished', function(data) {
+    var el = document.getElementById('lt-game-' + data.gameId);
+    if (el) el.parentNode && el.parentNode.removeChild(el);
+    delete _liveGames[data.gameId];
+    if (Object.keys(_liveGames).length === 0) {
+      root.innerHTML = '<div class="lt-empty">Kein Live-Spiel gerade.</div>';
+    }
+  });
+
+  try {
+    await DataStore.init(cfg);
   } catch(e) {
-    root.innerHTML = '<div class="error-banner">Fehler: ' + escapeHtml(e.message) + '</div>';
+    root.innerHTML = '<div class="error-banner">Fehler beim Laden.</div>';
   }
 }
 
