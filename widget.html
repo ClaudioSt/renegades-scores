@@ -1469,7 +1469,8 @@ async function renderSpielplan(root, cfg) {
   }
 }
 
-function renderStandingsTable(entry, teamIds) {
+function renderStandingsTable(entry, teamIds, liveTeamIds) {
+  liveTeamIds = liveTeamIds || new Set();
   if (!entry.rows || entry.rows.length === 0) {
     return '<div class="standings-empty">Keine Tabellendaten verfügbar.</div>';
   }
@@ -1484,11 +1485,13 @@ function renderStandingsTable(entry, teamIds) {
     var cls = '';
     if (teamIds.indexOf(row.team_id) >= 0) cls += ' standings-row-highlight';
     if (restricted.indexOf(row.team_id) >= 0) cls += ' standings-row-restricted';
-    return '<tr class="' + cls.trim() + '">'
+    var liveBadge = liveTeamIds.has(row.team_id)
+      ? '<span class="standings-live-badge">⚡</span>' : '';
+    return '<tr id="row-' + row.team_id + '" class="' + cls.trim() + '">'
       + '<td class="col-rank">' + (i + 1) + '.</td>'
       + '<td class="col-team">'
       + (TEAM_LOGOS[row.team_id] ? '<img src="' + TEAM_LOGOS[row.team_id] + '" class="team-logo" loading="lazy" onerror="this.style.display=\'none\'">' : '')
-      + escapeHtml(row.team_name) + '</td>'
+      + liveBadge + escapeHtml(row.team_name) + '</td>'
       + '<td>' + row.Sp + '</td>'
       + '<td>' + row.S  + '</td>'
       + '<td>' + row.U  + '</td>'

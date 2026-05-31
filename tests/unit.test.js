@@ -1095,3 +1095,33 @@ describe('renderGameRow score cell ID', () => {
     assert.ok(html.includes('Opp'),  'must show away team name');
   });
 });
+
+// ─── renderStandingsTable — row IDs and live badge ───────────────────────────
+
+describe('renderStandingsTable row IDs', () => {
+  let w;
+  beforeEach(() => { w = freshContext(); });
+
+  function makeEntry(teamId, teamName) {
+    return {
+      name: 'Test League',
+      promotion_restricted: [],
+      rows: [{ team_id: teamId, team_name: teamName, Sp: 1, S: 1, U: 0, N: 0, EP: 14, GP: 7, PD: 7, SQ: 1.0 }],
+    };
+  }
+
+  it('table row has id="row-{teamId}"', () => {
+    const html = w.renderStandingsTable(makeEntry(159, 'Nürn'), [159]);
+    assert.ok(html.includes('id="row-159"'), 'row must have id="row-159"');
+  });
+
+  it('live team row has ⚡ badge when liveTeamIds contains team', () => {
+    const html = w.renderStandingsTable(makeEntry(159, 'Nürn'), [159], new Set([159]));
+    assert.ok(html.includes('standings-live-badge') || html.includes('⚡'), 'live team must have badge');
+  });
+
+  it('non-live team has no ⚡ badge', () => {
+    const html = w.renderStandingsTable(makeEntry(200, 'Opp'), [159], new Set());
+    assert.ok(!html.includes('standings-live-badge'), 'non-live team must not have badge');
+  });
+});
