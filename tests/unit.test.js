@@ -903,3 +903,88 @@ describe('_renderStandingsForYear', () => {
     assert.ok(html.includes('standings-row-highlight'), 'highlight class must appear for team in teams array');
   });
 });
+
+// ─── DataStore.subscribe / emit ───────────────────────────────────────────────
+
+describe('DataStore.subscribe / emit', () => {
+  let w;
+  beforeEach(() => { w = freshContext(); });
+
+  it('fires a registered callback', () => {
+    let received = null;
+    w.DataStore.subscribe('test-event', (d) => { received = d; });
+    w.DataStore.emit('test-event', 42);
+    assert.equal(received, 42);
+  });
+
+  it('fires multiple callbacks for the same event', () => {
+    let a = 0, b = 0;
+    w.DataStore.subscribe('x', () => { a = 1; });
+    w.DataStore.subscribe('x', () => { b = 1; });
+    w.DataStore.emit('x', null);
+    assert.equal(a, 1);
+    assert.equal(b, 1);
+  });
+
+  it('does not fire callback for a different event', () => {
+    let called = false;
+    w.DataStore.subscribe('a', () => { called = true; });
+    w.DataStore.emit('b', null);
+    assert.equal(called, false);
+  });
+});
+
+// ─── DataStore._deriveScore ───────────────────────────────────────────────────
+
+describe('DataStore._deriveScore', () => {
+  let w;
+  beforeEach(() => { w = freshContext(); });
+
+  it('returns zero score for empty ticks', () => {
+    assert.deepEqual(w.DataStore._deriveScore([]), { home: 0, away: 0 });
+  });
+
+  it('counts a home Touchdown as 6', () => {
+    const s = w.DataStore._deriveScore([{ team: 'home', text: 'Touchdown' }]);
+    assert.equal(s.home, 6);
+    assert.equal(s.away, 0);
+  });
+
+  it('counts an away Touchdown as 6', () => {
+    const s = w.DataStore._deriveScore([{ team: 'away', text: 'Touchdown' }]);
+    assert.equal(s.home, 0);
+    assert.equal(s.away, 6);
+  });
+
+  it('counts a 1-Extra-Punkt', () => {
+    const s = w.DataStore._deriveScore([
+      { team: 'home', text: 'Touchdown' },
+      { team: 'home', text: '1-Extra-Punkt: OK' },
+    ]);
+    assert.equal(s.home, 7);
+  });
+
+  it('counts a 2-Extra-Punkte', () => {
+    const s = w.DataStore._deriveScore([
+      { team: 'away', text: 'Touchdown' },
+      { team: 'away', text: '2-Extra-Punkte: OK' },
+    ]);
+    assert.equal(s.away, 8);
+  });
+
+  it('ignores neutral ticks (team === null)', () => {
+    const s = w.DataStore._deriveScore([{ team: null, text: 'Halbzeit' }]);
+    assert.deepEqual(s, { home: 0, away: 0 });
+  });
+
+  it('accumulates multiple scores', () => {
+    const ticks = [
+      { team: 'home', text: 'Touchdown' },
+      { team: 'home', text: '1-Extra-Punkt: OK' },
+      { team: 'away', text: 'Touchdown' },
+    ];
+    const s = w.DataStore._deriveScore(ticks);
+    assert.equal(s.home, 7);
+    assert.equal(s.away, 6);
+  });
+});

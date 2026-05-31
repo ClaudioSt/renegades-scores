@@ -762,6 +762,50 @@ function resolveTeamAbbrev(teamId, entries) {
   return String(teamId);
 }
 
+// ── DATA STORE ───────────────────────────────────────────────────────────────
+var DataStore = (function() {
+  var _snap        = null;
+  var _liveScores  = {};          // gameId → { home: N, away: N }
+  var _ticks       = {};          // gameId → Tick[] oldest-first
+  var _fpSets      = {};          // gameId → Set of fingerprints (dedup)
+  var _mode        = 'watching';  // 'watching' | 'live'
+  var _int         = null;
+  var _subs        = {};
+  var _watchedIds  = new Set();
+  var WATCH_MS     = 30 * 60 * 1000;
+  var LIVE_MS      = 5 * 1000;
+
+  function subscribe(ev, fn) {
+    if (!_subs[ev]) _subs[ev] = [];
+    _subs[ev].push(fn);
+  }
+
+  function emit(ev, data) {
+    (_subs[ev] || []).forEach(function(fn) { fn(data); });
+  }
+
+  function _deriveScore(ticks) {
+    var score = new Object(); score.home = 0; score.away = 0;
+    (ticks || []).forEach(function(tick) {
+      if (tick.team == null) return;
+      var pts = getTickPoints(tick.text || '');
+      if (pts > 0) score[tick.team] += pts;
+    });
+    return score;
+  }
+
+  return {
+    get snapshot()    { return _snap; },
+    get liveScores()  { return _liveScores; },
+    get ticks()       { return _ticks; },
+    get _mode()       { return _mode; },
+    subscribe:        subscribe,
+    emit:             emit,
+    _deriveScore:     _deriveScore,
+    // init and _poll added in Task 5
+  };
+})();
+
 // ── SNAPSHOT QUICK-RENDER ───────────────────────────────────────────────────
 function quickRenderFromSnap(snap, teamId, els, cfg, today) {
   var forTeam = snap.gamedays.filter(function(gd) {
