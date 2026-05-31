@@ -211,15 +211,9 @@
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
 var API_BASE               = 'https://leaguesphere.app/api';
-var LIVETICKER_BASE        = 'https://leaguesphere.app/liveticker/'; // HTML gameday page (not the JSON API)
-var CACHE_VERSION          = 3;
 var LIVETICKER_API         = API_BASE + '/liveticker/';
-var _pastCache             = {};
-var _futureCache           = {};
 var _liveGames             = {};    // gameId → gameState (see spec)
 var _liveInterval          = null;  // setInterval handle for polling
-var _spielplanPollInterval = null;  // setInterval handle for spielplan live polling
-var _spielplanLiveIds      = new Set(); // game IDs being polled across all teams
 
 // Team logo paths (relative, served from logos/ directory)
 var TEAM_LOGOS = {
@@ -301,11 +295,9 @@ function parseConfigFromSearch(search) {
   var showTitle   = params.get('title')       !== '0';
   var compact     = params.get('compact')     === '1';
   var view        = params.get('view') || 'spielplan';
-  var liveUrl     = params.get('live_url') || '';
-  if (liveUrl && !/^https?:\/\//.test(liveUrl)) liveUrl = '';
   return { teams: teams, color: color, refresh: refresh, past: past, future: future,
            showPast: showPast, showFuture: showFuture, showTitle: showTitle, compact: compact,
-           view: view, liveUrl: liveUrl };
+           view: view };
 }
 function parseConfig() { return parseConfigFromSearch(window.location.search); }
 
@@ -387,49 +379,6 @@ function _toggleGameDetail(mainEl) {
   var isOpen = _openDetail === detail;
   if (_openDetail) { _openDetail.hidden = true; _openDetail = null; }
   if (!isOpen) { detail.hidden = false; _openDetail = detail; }
-}
-
-function splitTodayGames(games, teamId) {
-  var forTeam = games.filter(function(g) {
-    return g.results.some(function(r) { return r.team_id === teamId; });
-  });
-  return {
-    live:     forTeam.filter(function(g) { return g.status === 'live'; }),
-    finished: forTeam.filter(function(g) { return g.status === 'beendet'; }),
-    upcoming: forTeam.filter(function(g) { return g.status !== 'live' && g.status !== 'beendet'; }),
-  };
-}
-
-// ── CACHE ────────────────────────────────────────────────────────────────────
-function cacheKey(teamId) { return 'lsw_' + teamId; }
-
-function loadCache(teamId, storage) {
-  var store = storage || localStorage;
-  try {
-    var raw = store.getItem(cacheKey(teamId));
-    if (!raw) return null;
-    var cache = JSON.parse(raw);
-    if (cache.version !== CACHE_VERSION) return null;
-    return cache;
-  } catch(e) { return null; }
-}
-
-function saveCache(teamId, data, storage) {
-  var store = storage || localStorage;
-  try {
-    store.setItem(cacheKey(teamId), JSON.stringify(Object.assign({}, data, { version: CACHE_VERSION })));
-    return true;
-  } catch(e) { return false; }
-}
-
-function clearCache(teamId, storage) {
-  var store = storage || localStorage;
-  try { store.removeItem(cacheKey(teamId)); } catch(e) {}
-}
-
-function needsDiscovery(cache) {
-  if (!cache || !cache.next_discovery) return true;
-  return new Date(cache.next_discovery) <= new Date();
 }
 
 // ── CLASSIFICATION ───────────────────────────────────────────────────────────
@@ -516,47 +465,6 @@ function renderLiveGameB3(gs) {
     + '<tbody id="lt-body-' + gs.gameId + '">'
     + buildTickRows(gs)
     + '</tbody></table>'
-    + '</div>';
-}
-
-function renderUpcomingFallback(teamId, snap) {
-  var today = new Date().toISOString().slice(0, 10);
-  var upcoming = snap.gamedays.filter(function(gd) {
-    return gd.games
-      && gd.games.some(function(g) {
-           return g.results.some(function(r) { return r.team_id === teamId; });
-         })
-      && classifyGameday(gd, gd.games, teamId, today) === 'active';
-  }).sort(function(a, b) { return a.date.localeCompare(b.date); });
-  if (!upcoming.length) {
-    return '<div class="no-data">Keine kommenden Spieltage gefunden.</div>';
-  }
-  var gd = upcoming[0];
-  return '<div class="section-title">Kein Live-Spiel — nächstes Spiel:</div>'
-    + renderGamedayCard(gd, gd.games, teamId, false);
-}
-
-function renderLiveBanner(game, gd, teamId, liveUrl) {
-  var home = game.results.find(function(r) { return r.isHome; });
-  var away = game.results.find(function(r) { return !r.isHome; });
-  if (!home || !away) return '';
-  var homeName = escapeHtml(resolveTeamName(home.team_name));
-  var awayName = escapeHtml(resolveTeamName(away.team_name));
-  var gdName   = escapeHtml(gd.name);
-  var league   = escapeHtml(gd.league_display || '');
-  var hs       = game.halftime_score;
-  var scoreStr = (hs && hs.home != null && hs.away != null) ? hs.home + ' : ' + hs.away : '– : –';
-  var inner = '<span class="live-badge">● LIVE</span>'
-    + '<div class="live-info">' + homeName + ' vs. ' + awayName
-    + '<br><small>' + gdName + ' · ' + league + '</small></div>'
-    + '<div id="sp-live-score-' + game.id + '" class="live-score">' + scoreStr + '</div>';
-  if (liveUrl && /^https?:\/\//.test(liveUrl)) {
-    return '<a class="live-banner" href="' + escapeHtml(liveUrl) + '"'
-      + ' target="_blank" rel="noopener noreferrer">' + inner + '</a>';
-  }
-  var tickerUrl = LIVETICKER_BASE + '?gameday=' + encodeURIComponent(gd.id);
-  return '<div class="live-banner">' + inner
-    + '<a href="' + tickerUrl + '" target="_blank">🔴 Liveticker</a>'
     + '</div>';
 }
 
@@ -802,32 +710,6 @@ var DataStore = (function() {
   };
 })();
 
-// ── SNAPSHOT QUICK-RENDER ───────────────────────────────────────────────────
-function quickRenderFromSnap(snap, teamId, els, cfg, today) {
-  var forTeam = snap.gamedays.filter(function(gd) {
-    return gd.games && gd.games.some(function(g) {
-      return g.results.some(function(r) { return r.team_id === teamId; });
-    });
-  });
-  var past = forTeam
-    .filter(function(gd) { return classifyGameday(gd, gd.games, teamId, today) === 'past'; })
-    .sort(function(a, b) { return b.date.localeCompare(a.date); });
-  var active = forTeam
-    .filter(function(gd) { return classifyGameday(gd, gd.games, teamId, today) === 'active'; })
-    .sort(function(a, b) { return a.date.localeCompare(b.date); });
-
-  if (els.past && past.length) {
-    var pastWrapped = past.map(function(gd) { return { gd: gd, games: gd.games }; });
-    _pastCache[teamId] = pastWrapped;
-    els.past.innerHTML = renderPastSection(pastWrapped, teamId, cfg.past);
-  }
-  if (els.future) {
-    var sf = cfg.future > 0 ? active.slice(0, cfg.future) : active;
-    var normalized = sf.map(function(gd) { return { gd: gd, games: gd.games }; });
-    _futureCache[teamId] = normalized;
-    els.future.innerHTML = renderFutureSection(normalized, teamId, 0);
-  }
-}
 function renderFutureSection(entries, teamId, visibleExtras) {
   if (!entries.length) return '<div class="no-data">Keine kommenden Spieltage geplant.</div>';
   visibleExtras = visibleExtras || 0;
@@ -864,28 +746,6 @@ function renderPastSection(pastSorted, teamId, visibleCount) {
 }
 
 // ── VIEW RENDERERS ───────────────────────────────────────────────────────────
-
-function startSpielplanPolling(newGameIds) {
-  newGameIds.forEach(function(id) { _spielplanLiveIds.add(id); });
-  if (_spielplanPollInterval) return;
-
-  function poll() {
-    fetchJSON(LIVETICKER_API).then(function(data) {
-      data.forEach(function(game) {
-        if (!_spielplanLiveIds.has(game.gameId)) return;
-        var el = document.getElementById('sp-live-score-' + game.gameId);
-        if (el) el.textContent = game.home.score + ' : ' + game.away.score;
-        if (game.status === 'Beendet') _spielplanLiveIds.delete(game.gameId);
-      });
-      if (_spielplanLiveIds.size === 0) {
-        clearInterval(_spielplanPollInterval);
-        _spielplanPollInterval = null;
-      }
-    }).catch(function() { /* silent — retry next tick */ });
-  }
-
-  _spielplanPollInterval = setInterval(poll, 30000);
-}
 
 async function renderLiveView(root, cfg) {
   // Reset any existing global live state
