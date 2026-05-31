@@ -1551,7 +1551,7 @@ function _applyLiveScore(row, liveScore, isHome) {
   var newN  = row.N  + (!won && !drew ? 1 : 0);
   var newEP = row.EP + myScore;
   var newGP = row.GP + oppScore;
-  var sq    = newSp > 0 ? ((2 * newS + newU) / (2 * newSp)).toFixed(3) : '0.000';
+  var sq    = newSp > 0 ? parseFloat(((2 * newS + newU) / (2 * newSp)).toFixed(4)) : 0;
   return Object.assign({}, row, { Sp: newSp, S: newS, U: newU, N: newN, EP: newEP, GP: newGP, SQ: sq });
 }
 
@@ -1619,7 +1619,7 @@ async function renderTableView(root, cfg) {
         cells[6].textContent = updatedRow.EP;
         cells[7].textContent = updatedRow.GP;
         cells[8].textContent = updatedRow.EP - updatedRow.GP;  // PD
-        cells[9].textContent = updatedRow.SQ;
+        cells[9].textContent = updatedRow.SQ.toFixed(4);
       }
     });
   });

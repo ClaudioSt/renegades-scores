@@ -352,7 +352,7 @@ describe('_applyLiveScore', () => {
     assert.equal(updated.S,  2);
     assert.equal(updated.EP, 35);
     assert.equal(updated.GP, 21);
-    assert.match(updated.SQ, /0\.\d{3}/);
+    assert.ok(typeof updated.SQ === 'number' && updated.SQ > 0 && updated.SQ < 1, 'SQ should be a float between 0 and 1');
   });
 
   it('adds a loss to a standings row', () => {
