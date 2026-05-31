@@ -1540,80 +1540,113 @@ function _groupLeaguesFromSnapshot(snap, teamIds) {
   });
 }
 
+function _applyLiveScore(row, liveScore, isHome) {
+  var myScore  = isHome ? liveScore.homeScore : liveScore.awayScore;
+  var oppScore = isHome ? liveScore.awayScore : liveScore.homeScore;
+  var won  = myScore > oppScore;
+  var drew = myScore === oppScore;
+  var newSp = row.Sp + 1;
+  var newS  = row.S  + (won  ? 1 : 0);
+  var newU  = row.U  + (drew ? 1 : 0);
+  var newN  = row.N  + (!won && !drew ? 1 : 0);
+  var newEP = row.EP + myScore;
+  var newGP = row.GP + oppScore;
+  var sq    = newSp > 0 ? ((2 * newS + newU) / (2 * newSp)).toFixed(3) : '0.000';
+  return Object.assign({}, row, { Sp: newSp, S: newS, U: newU, N: newN, EP: newEP, GP: newGP, SQ: sq });
+}
+
 async function renderTableView(root, cfg) {
   root.innerHTML = '<div class="loading">Lade Tabelle…</div>';
-  var snap = await loadSnapshot();
-  var standings = snap.standings || {};
 
-  // Collect all {leagueKey, seasonKey, year, entry} tuples that have rows
-  var allEntries = [];
-  Object.keys(standings).forEach(function(lk) {
-    Object.keys(standings[lk]).forEach(function(sk) {
-      var entry = standings[lk][sk];
-      if (entry.rows && entry.rows.length > 0) {
-        allEntries.push({ leagueKey: lk, seasonKey: sk, year: parseInt(sk, 10) || 0, entry: entry });
+  DataStore.subscribe('snapshot-loaded', function(snap) {
+    _renderTableFromSnap(root, snap, cfg.teams);
+  });
+
+  DataStore.subscribe('game-score-update', function(data) {
+    var snap = DataStore.snapshot;
+    if (!snap) return;
+    var liveTeamIds = new Set();
+    snap.gamedays.forEach(function(gd) {
+      (gd.games || []).forEach(function(g) {
+        if (g.id !== data.gameId) return;
+        g.results.forEach(function(r) { liveTeamIds.add(r.team_id); });
+      });
+    });
+    liveTeamIds.forEach(function(teamId) {
+      var rowEl = document.getElementById('row-' + teamId);
+      if (!rowEl) return;
+      rowEl.classList.add('standings-row-live');
+      var badge = rowEl.querySelector('.standings-live-badge');
+      if (!badge) {
+        var td = rowEl.querySelector('.col-team');
+        if (td) {
+          // safe — hardcoded literal, not user data
+          td.insertAdjacentHTML('afterbegin', '<span class="standings-live-badge">⚡</span>');
+        }
       }
     });
   });
 
-  // Find years where at least one cfg.team appears; fall back to all non-empty years
-  var teamYears = allEntries
-    .filter(function(e) {
-      return e.entry.rows.some(function(r) { return cfg.teams.indexOf(r.team_id) >= 0; });
-    })
-    .map(function(e) { return e.year; });
+  DataStore.subscribe('game-finished', function(data) {
+    var snap = DataStore.snapshot;
+    if (!snap) return;
+    snap.gamedays.forEach(function(gd) {
+      (gd.games || []).forEach(function(g) {
+        if (g.id !== data.gameId) return;
+        g.results.forEach(function(r) {
+          var rowEl = document.getElementById('row-' + r.team_id);
+          if (!rowEl) return;
+          rowEl.classList.remove('standings-row-live');
+          var badge = rowEl.querySelector('.standings-live-badge');
+          if (badge) badge.parentNode.removeChild(badge);
+        });
+      });
+    });
+  });
 
-  var activeYears = teamYears.length > 0
-    ? teamYears.filter(function(y, i, a) { return a.indexOf(y) === i; })
-    : allEntries.map(function(e) { return e.year; }).filter(function(y, i, a) { return a.indexOf(y) === i; });
+  try {
+    await DataStore.init(cfg);
+  } catch(e) {
+    root.innerHTML = '<div class="error-banner">Fehler beim Laden der Tabelle.</div>';
+  }
+}
 
-  if (activeYears.length === 0) {
-    root.innerHTML = '<div class="standings-empty">Keine Tabellendaten verfügbar.</div>';
+function _renderTableFromSnap(root, snap, teamIds) {
+  var leagues = _groupLeaguesFromSnapshot(snap, teamIds);
+  if (leagues.length === 0) {
+    root.innerHTML = '<div class="no-data">Keine Tabellendaten verfügbar.</div>';
     return;
   }
-
-  // Default to most recent year
-  activeYears.sort(function(a, b) { return b - a; });
-  var defaultYear = activeYears[0];
-
-  // Build year tabs HTML (only when multiple years)
-  var tabsHtml = '';
-  if (activeYears.length > 1) {
-    tabsHtml = '<div class="year-tabs" id="standings-year-tabs">'
-      + activeYears.map(function(y) {
-          var active = y === defaultYear ? ' year-tab-active' : '';
-          return '<button class="year-tab' + active + '" data-year="' + y + '">' + y + '</button>';
-        }).join('')
-      + '</div>';
-  }
-
-  var contentHtml = _renderStandingsForYear(allEntries, defaultYear, cfg.teams);
-
-  root.innerHTML = '<div class="standings-wrapper">'
-    + tabsHtml
-    + '<div class="standings-year-content">' + contentHtml + '</div>'
-    + '</div>';
-
-  _standingsAllEntries = allEntries;
-  _standingsTeams = cfg.teams;
-  _standingsRoot = root;
-
-  root.addEventListener('click', function(e) {
-    var btn = e.target.closest('.year-tab');
-    if (!btn || !_standingsRoot) return;
-    var year = parseInt(btn.getAttribute('data-year'), 10);
-
-    // Update active tab styling
-    _standingsRoot.querySelectorAll('.year-tab').forEach(function(b) {
-      b.classList.toggle('year-tab-active', parseInt(b.getAttribute('data-year'), 10) === year);
+  var html = '<div class="standings-wrapper">';
+  leagues.forEach(function(lg) {
+    html += '<div class="standings-league-title">' + escapeHtml(lg.league) + '</div>';
+    // Find precomputed standings entry for this league
+    var entry = null;
+    if (snap.standings) {
+      Object.keys(snap.standings).forEach(function(year) {
+        Object.keys(snap.standings[year]).forEach(function(key) {
+          var e = snap.standings[year][key];
+          if (e.league === lg.league && !entry) entry = e;
+        });
+      });
+    }
+    if (entry) {
+      html += renderStandingsTable(entry, teamIds, new Set());
+    }
+    // Upcoming fixtures below table
+    var upcoming = lg.gamedays.filter(function(gd) {
+      return (gd.games || []).some(function(g) { return g.final_score === null; });
     });
-
-    // Re-render content for selected year (tabs wrapper stays, only content swapped)
-    var contentEl = _standingsRoot.querySelector('.standings-year-content');
-    if (contentEl) {
-      contentEl.innerHTML = _renderStandingsForYear(_standingsAllEntries, year, _standingsTeams);
+    if (upcoming.length > 0) {
+      html += '<div class="standings-league-title" style="font-size:0.75rem;margin-top:12px;">Ausstehende Spiele</div>';
+      upcoming.forEach(function(gd) {
+        html += '<div class="gameday-upcoming">'
+          + escapeHtml(formatDate(gd.date)) + ' — ' + escapeHtml(gd.name) + '</div>';
+      });
     }
   });
+  html += '</div>';
+  root.innerHTML = html;
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────

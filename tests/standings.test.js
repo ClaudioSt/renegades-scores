@@ -1,6 +1,6 @@
 'use strict';
 
-const { describe, it } = require('node:test');
+const { describe, it, beforeEach } = require('node:test');
 const assert = require('node:assert/strict');
 
 const { computeStandings } = require('../standings.js');
@@ -335,5 +335,32 @@ describe('computeStandings: row sorting', () => {
       assert.ok(typeof row.team_name === 'string' && row.team_name.length > 0,
         'each row must have a non-empty team_name');
     }
+  });
+});
+
+// ─── _applyLiveScore ──────────────────────────────────────────────────────────
+
+describe('_applyLiveScore', () => {
+  const { freshContext } = require('./helpers');
+  let w;
+  beforeEach(() => { w = freshContext(); });
+
+  it('adds a win to a standings row', () => {
+    const row = { team_id: 159, team_name: 'Nürn', Sp: 2, S: 1, U: 0, N: 1, EP: 21, GP: 14, SQ: '0.500' };
+    const updated = w._applyLiveScore(row, { homeScore: 14, awayScore: 7 }, true);
+    assert.equal(updated.Sp, 3);
+    assert.equal(updated.S,  2);
+    assert.equal(updated.EP, 35);
+    assert.equal(updated.GP, 21);
+    assert.match(updated.SQ, /0\.\d{3}/);
+  });
+
+  it('adds a loss to a standings row', () => {
+    const row = { team_id: 159, team_name: 'Nürn', Sp: 2, S: 2, U: 0, N: 0, EP: 28, GP: 7, SQ: '1.000' };
+    const updated = w._applyLiveScore(row, { homeScore: 14, awayScore: 7 }, false);
+    assert.equal(updated.Sp, 3);
+    assert.equal(updated.N,  1);
+    assert.equal(updated.EP, 35);
+    assert.equal(updated.GP, 21);
   });
 });
