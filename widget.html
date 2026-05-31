@@ -1701,8 +1701,6 @@ function _renderTableFromSnap(root, snap, teamIds) {
     return;
   }
 
-  if (cfg.refresh) cfg.teams.forEach(function(id) { clearCache(id); });
-
   var root = document.getElementById('root');
 
   if (cfg.view === 'live') {
