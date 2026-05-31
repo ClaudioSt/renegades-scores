@@ -676,16 +676,16 @@ function renderGameRow(game, teamId, showScore) {
   var field    = escapeHtml(String(game.field));
 
   var scoreHTML;
-  if (!showScore) {
+  if (!showScore || game.final_score === null) {
     scoreHTML = '<div class="upcoming-time">' + time + ' Uhr</div>';
   } else {
     var cls = getResultClass(teamId, game.results);
     var hs  = game.halftime_score;
     var fs  = game.final_score;
     if (!fs) {
-      scoreHTML = '<div class="score">(kein Ergebnis)</div>';
+      scoreHTML = '<div class="score" id="score-' + game.id + '">(kein Ergebnis)</div>';
     } else {
-      scoreHTML = '<div class="score ' + cls + '">' + fs.home + ' : ' + fs.away + '</div>';
+      scoreHTML = '<div class="score ' + cls + '" id="score-' + game.id + '">' + fs.home + ' : ' + fs.away + '</div>';
     }
   }
 

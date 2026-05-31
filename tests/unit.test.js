@@ -1056,3 +1056,42 @@ describe('DataStore._poll — emits game-finished on Spiel beendet tick', () => 
     assert.deepEqual(finished, [99]);
   });
 });
+
+// ─── renderGameRow — score cell ID ───────────────────────────────────────────
+
+describe('renderGameRow score cell ID', () => {
+  let w;
+  beforeEach(() => { w = freshContext(); });
+
+  function makeGame(id, status, finalScore) {
+    return {
+      id,
+      status,
+      stage: null, standing: null,
+      scheduled: '10:00', field: '1',
+      final_score: finalScore || null,
+      halftime_score: null,
+      results: [
+        { team_id: 159, team_name: 'Nürn', pa: 7,  isHome: true  },
+        { team_id: 200, team_name: 'Opp',  pa: 14, isHome: false },
+      ],
+    };
+  }
+
+  it('completed game score box has id="score-{gameId}"', () => {
+    const html = w.renderGameRow(makeGame(77, 'Beendet', '14:7'), 159, true);
+    assert.ok(html.includes('id="score-77"'), 'score cell must have id="score-77"');
+  });
+
+  it('scheduled game has no score box', () => {
+    const html = w.renderGameRow(makeGame(88, 'scheduled', null), 159, false);
+    assert.ok(!html.includes('id="score-88"'), 'scheduled game must not have score cell');
+    assert.ok(!html.includes('14:7'), 'scheduled game must not show score');
+  });
+
+  it('scheduled game still shows teams', () => {
+    const html = w.renderGameRow(makeGame(88, 'scheduled', null), 159, false);
+    assert.ok(html.includes('Nürn'), 'must show home team name');
+    assert.ok(html.includes('Opp'),  'must show away team name');
+  });
+});
