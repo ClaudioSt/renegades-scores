@@ -1623,12 +1623,16 @@ function _renderTableFromSnap(root, snap, teamIds) {
     // Find precomputed standings entry for this league
     var entry = null;
     if (snap.standings) {
-      Object.keys(snap.standings).forEach(function(year) {
-        Object.keys(snap.standings[year]).forEach(function(key) {
-          var e = snap.standings[year][key];
-          if (e.league === lg.league && !entry) entry = e;
+      var phase = null;
+      lg.gamedays.forEach(function(gd) { if (gd.phase && !phase) phase = gd.phase; });
+      if (phase) {
+        Object.keys(snap.standings).forEach(function(slug) {
+          Object.keys(snap.standings[slug]).forEach(function(year) {
+            var e = snap.standings[slug][year];
+            if (e.name === phase && !entry) entry = e;
+          });
         });
-      });
+      }
     }
     if (entry) {
       html += renderStandingsTable(entry, teamIds, new Set());
