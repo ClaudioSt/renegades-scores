@@ -1406,10 +1406,7 @@ async function renderSpielplan(root, cfg) {
   DataStore.subscribe('game-score-update', function(data) {
     var el = document.getElementById('score-' + data.gameId);
     if (!el) return;
-    el.innerHTML =
-      '<span class="score-home">' + escapeHtml(String(data.homeScore)) + '</span>'
-      + '<span class="score-sep">:</span>'
-      + '<span class="score-away">' + escapeHtml(String(data.awayScore)) + '</span>';
+    el.textContent = data.homeScore + ' : ' + data.awayScore;
   });
 
   DataStore.subscribe('game-finished', function(data) {
