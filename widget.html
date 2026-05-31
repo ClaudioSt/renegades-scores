@@ -794,6 +794,102 @@ var DataStore = (function() {
     return score;
   }
 
+  async function init(cfg) {
+    _snap = await loadSnapshot();
+    var today = new Date().toISOString().slice(0, 10);
+    _watchedIds = new Set();
+    _snap.gamedays.forEach(function(gd) {
+      if (gd.date !== today) return;
+      (gd.games || []).forEach(function(g) {
+        var watched = cfg.teams.some(function(tid) {
+          return g.results.some(function(r) { return r.team_id === tid; });
+        });
+        if (watched) _watchedIds.add(g.id);
+      });
+    });
+    emit('snapshot-loaded', _snap);
+    _int = setInterval(function() { _pollNow(); }, WATCH_MS);
+  }
+
+  function _pollNow() {
+    fetchJSON(LIVETICKER_API).then(function(data) {
+      var liveForUs = (data || []).filter(function(g) { return _watchedIds.has(g.gameId); });
+      _pollWith(_snap, _watchedIds, liveForUs);
+    }).catch(function() {});
+  }
+
+  function _pollWith(snap, watchedIds, liveForUs) {
+    if (!liveForUs || liveForUs.length === 0) return;
+
+    if (_mode === 'watching') {
+      _mode = 'live';
+      clearInterval(_int);
+      _int = setInterval(function() { _pollNow(); }, LIVE_MS);
+    }
+
+    liveForUs.forEach(function(game) {
+      var gameId   = game.gameId;
+      var known    = _ticks[gameId] || [];
+      var fps      = _fpSets[gameId] || new Set();
+      var prevLen  = known.length;
+
+      // Merge ticks (API order may be newest-first; dedup by fingerprint)
+      var incoming = game.ticks || [];
+      incoming.slice().reverse().forEach(function(tick) {
+        var fp = (tick.text || '') + '|' + (tick.time || '');
+        if (!fps.has(fp)) { fps.add(fp); known.push(tick); }
+      });
+      _ticks[gameId]  = known;
+      _fpSets[gameId] = fps;
+
+      // Derive score and emit if changed
+      var score    = _deriveScore(known);
+      var prev     = _liveScores[gameId];
+      var changed  = !prev || prev.home !== score.home || prev.away !== score.away;
+      _liveScores[gameId] = score;
+
+      if (changed) {
+        var snapGame = null;
+        (snap.gamedays || []).forEach(function(gd) {
+          (gd.games || []).forEach(function(g) { if (g.id === gameId) snapGame = g; });
+        });
+        var homeRes = snapGame && snapGame.results.find(function(r) { return r.isHome; });
+        var awayRes = snapGame && snapGame.results.find(function(r) { return !r.isHome; });
+        emit('game-score-update', {
+          gameId:    gameId,
+          homeScore: score.home,
+          awayScore: score.away,
+          homeName:  homeRes ? homeRes.team_name : '',
+          awayName:  awayRes ? awayRes.team_name : '',
+        });
+      }
+
+      // Emit new ticks
+      var newTicks = known.slice(prevLen);
+      if (newTicks.length > 0) {
+        emit('ticks-update', { gameId: gameId, newTicks: newTicks });
+
+        // Check for game over
+        var over = newTicks.some(function(t) {
+          return t.team == null && t.text === 'Spiel beendet';
+        });
+        if (over) {
+          emit('game-finished', { gameId: gameId });
+          delete _ticks[gameId];
+          delete _fpSets[gameId];
+          delete _liveScores[gameId];
+          watchedIds.delete(gameId);
+
+          if (Object.keys(_ticks).length === 0 && _mode === 'live') {
+            _mode = 'watching';
+            clearInterval(_int);
+            _int = setInterval(function() { _pollNow(); }, WATCH_MS);
+          }
+        }
+      }
+    });
+  }
+
   return {
     get snapshot()    { return _snap; },
     get liveScores()  { return _liveScores; },
@@ -802,7 +898,8 @@ var DataStore = (function() {
     subscribe:        subscribe,
     emit:             emit,
     _deriveScore:     _deriveScore,
-    // init and _poll added in Task 5
+    _pollWith:        _pollWith,
+    init:             init,
   };
 })();
 

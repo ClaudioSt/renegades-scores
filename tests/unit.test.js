@@ -988,3 +988,71 @@ describe('DataStore._deriveScore', () => {
     assert.equal(s.away, 6);
   });
 });
+
+// ─── DataStore.init / _poll state machine ─────────────────────────────────────
+
+describe('DataStore._poll — WATCHING stays quiet when no ticks for watched games', () => {
+  it('emits nothing when liveticker response has no watched games', async () => {
+    const w = freshContext({
+      fetch: async () => ({ ok: true, json: async () => [] }),
+    });
+    const events = [];
+    w.DataStore.subscribe('game-score-update', (d) => events.push('score'));
+    w.DataStore.subscribe('ticks-update',      (d) => events.push('ticks'));
+    w.DataStore.subscribe('game-finished',     (d) => events.push('finish'));
+
+    await w.DataStore._pollWith({gamedays:[]}, new Set(), []);
+    assert.deepEqual(events, []);
+  });
+});
+
+describe('DataStore._poll — transitions to LIVE when ticks arrive', () => {
+  it('emits game-score-update when a watched game has ticks', async () => {
+    const w = freshContext();
+    const scores = [];
+    w.DataStore.subscribe('game-score-update', (d) => scores.push(d));
+
+    const snap = {
+      gamedays: [{
+        id: 1, date: new Date().toISOString().slice(0, 10),
+        games: [{ id: 99, status: 'live', results: [
+          { team_id: 159, team_name: 'Nürn', pa: 0, isHome: true },
+          { team_id: 200, team_name: 'Opp',  pa: 0, isHome: false },
+        ]}],
+      }],
+    };
+
+    const ticks = [
+      { team: 'home', text: 'Touchdown', time: '00:30' },
+      { team: 'home', text: '1-Extra-Punkt: OK', time: '00:32' },
+    ];
+    await w.DataStore._pollWith(snap, new Set([99]), [{ gameId: 99, ticks: ticks }]);
+    assert.equal(scores.length, 1);
+    assert.equal(scores[0].gameId, 99);
+    assert.equal(scores[0].homeScore, 7);
+    assert.equal(scores[0].awayScore, 0);
+  });
+});
+
+describe('DataStore._poll — emits game-finished on Spiel beendet tick', () => {
+  it('fires game-finished event', async () => {
+    const w = freshContext();
+    const finished = [];
+    w.DataStore.subscribe('game-finished', (d) => finished.push(d.gameId));
+
+    const snap = {
+      gamedays: [{
+        id: 1, date: new Date().toISOString().slice(0, 10),
+        games: [{ id: 99, status: 'live', results: [
+          { team_id: 159, team_name: 'Nürn', pa: 0, isHome: true },
+          { team_id: 200, team_name: 'Opp',  pa: 0, isHome: false },
+        ]}],
+      }],
+    };
+    const ticks = [
+      { team: null, text: 'Spiel beendet', time: '01:00' },
+    ];
+    await w.DataStore._pollWith(snap, new Set([99]), [{ gameId: 99, ticks: ticks }]);
+    assert.deepEqual(finished, [99]);
+  });
+});
