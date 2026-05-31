@@ -1565,24 +1565,61 @@ async function renderTableView(root, cfg) {
   DataStore.subscribe('game-score-update', function(data) {
     var snap = DataStore.snapshot;
     if (!snap) return;
-    var liveTeamIds = new Set();
+
+    // Find which teams are in this game and whether they are home or away
+    var gameTeams = [];  // [{ team_id, isHome }]
     snap.gamedays.forEach(function(gd) {
       (gd.games || []).forEach(function(g) {
         if (g.id !== data.gameId) return;
-        g.results.forEach(function(r) { liveTeamIds.add(r.team_id); });
+        (g.results || []).forEach(function(r) {
+          gameTeams.push({ team_id: r.team_id, isHome: r.isHome });
+        });
       });
     });
-    liveTeamIds.forEach(function(teamId) {
-      var rowEl = document.getElementById('row-' + teamId);
+
+    gameTeams.forEach(function(teamInfo) {
+      var rowEl = document.getElementById('row-' + teamInfo.team_id);
       if (!rowEl) return;
+
+      // Add live class + badge if not already there
       rowEl.classList.add('standings-row-live');
-      var badge = rowEl.querySelector('.standings-live-badge');
-      if (!badge) {
+      if (!rowEl.querySelector('.standings-live-badge')) {
         var td = rowEl.querySelector('.col-team');
         if (td) {
           // safe — hardcoded literal, not user data
           td.insertAdjacentHTML('afterbegin', '<span class="standings-live-badge">⚡</span>');
         }
+      }
+
+      // Find base row stats from snap.standings
+      var baseRow = null;
+      if (snap.standings) {
+        Object.keys(snap.standings).forEach(function(slug) {
+          Object.keys(snap.standings[slug]).forEach(function(year) {
+            var entry = snap.standings[slug][year];
+            (entry.rows || []).forEach(function(r) {
+              if (r.team_id === teamInfo.team_id && !baseRow) baseRow = r;
+            });
+          });
+        });
+      }
+      if (!baseRow) return;
+
+      // Compute live-adjusted stats
+      var liveScore = { homeScore: data.homeScore, awayScore: data.awayScore };
+      var updatedRow = _applyLiveScore(baseRow, liveScore, teamInfo.isHome);
+
+      // Update stat cells by column index: rank(0), team(1), Sp(2), S(3), U(4), N(5), EP(6), GP(7), PD(8), SQ(9)
+      var cells = rowEl.querySelectorAll('td');
+      if (cells.length >= 10) {
+        cells[2].textContent = updatedRow.Sp;
+        cells[3].textContent = updatedRow.S;
+        cells[4].textContent = updatedRow.U;
+        cells[5].textContent = updatedRow.N;
+        cells[6].textContent = updatedRow.EP;
+        cells[7].textContent = updatedRow.GP;
+        cells[8].textContent = updatedRow.EP - updatedRow.GP;  // PD
+        cells[9].textContent = updatedRow.SQ;
       }
     });
   });
