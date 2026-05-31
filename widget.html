@@ -1386,18 +1386,19 @@ async function renderSpielplan(root, cfg) {
         });
       });
       var past = forTeam
-        .filter(function(gd) { return gd.date < today; })
+        .filter(function(gd) { return classifyGameday(gd, gd.games, teamId, today) === 'past'; })
         .sort(function(a, b) { return b.date.localeCompare(a.date); })
         .map(function(gd) { return { id: gd.id, gd: gd, games: gd.games }; });
       var future = forTeam
-        .filter(function(gd) { return gd.date >= today; })
+        .filter(function(gd) { return classifyGameday(gd, gd.games, teamId, today) !== 'past'; })
         .sort(function(a, b) { return a.date.localeCompare(b.date); })
         .map(function(gd) { return { id: gd.id, gd: gd, games: gd.games }; });
+      var cappedFuture = (cfg.future > 0) ? future.slice(0, cfg.future) : future;
 
       var snapTeam = snap.teams.find(function(t) { return t.id === teamId; });
       if (els.title && snapTeam) els.title.textContent = snapTeam.name;
       if (els.past)   els.past.innerHTML   = renderPastSection(past, teamId, cfg.past);
-      if (els.future) els.future.innerHTML = renderFutureSection(future, teamId, 0);
+      if (els.future) els.future.innerHTML = renderFutureSection(cappedFuture, teamId, 0);
     });
   });
 
@@ -1414,8 +1415,6 @@ async function renderSpielplan(root, cfg) {
   DataStore.subscribe('game-finished', function(data) {
     var el = document.getElementById('score-' + data.gameId);
     if (el) el.classList.add('score-final');
-    var badge = document.getElementById('live-badge-' + data.gameId);
-    if (badge) badge.parentNode && badge.parentNode.removeChild(badge);
   });
 
   // Click delegation — "Weitere laden" and future toggle
@@ -1432,9 +1431,9 @@ async function renderSpielplan(root, cfg) {
       if (!pastEl) return;
       var past = snap.gamedays
         .filter(function(gd) {
-          return gd.date < today && gd.games && gd.games.some(function(g) {
+          return gd.games && gd.games.some(function(g) {
             return g.results.some(function(r) { return r.team_id === teamId; });
-          });
+          }) && classifyGameday(gd, gd.games, teamId, today) === 'past';
         })
         .sort(function(a, b) { return b.date.localeCompare(a.date); })
         .map(function(gd) { return { id: gd.id, gd: gd, games: gd.games }; });
@@ -1450,13 +1449,14 @@ async function renderSpielplan(root, cfg) {
       if (!futureEl) return;
       var future = snap.gamedays
         .filter(function(gd) {
-          return gd.date >= today && gd.games && gd.games.some(function(g) {
+          return gd.games && gd.games.some(function(g) {
             return g.results.some(function(r) { return r.team_id === teamId; });
-          });
+          }) && classifyGameday(gd, gd.games, teamId, today) !== 'past';
         })
         .sort(function(a, b) { return a.date.localeCompare(b.date); })
         .map(function(gd) { return { id: gd.id, gd: gd, games: gd.games }; });
-      futureEl.innerHTML = renderFutureSection(future, teamId, newVisible);
+      var cappedFuture = (cfg.future > 0) ? future.slice(0, cfg.future) : future;
+      futureEl.innerHTML = renderFutureSection(cappedFuture, teamId, newVisible);
     }
   });
 
