@@ -185,6 +185,10 @@
     .lt-scoring .lt-col-home, .lt-scoring .lt-col-away { color: #f0f0f0; }
     .lt-scoring .lt-col-mid { color: #fff; }
     .lt-neutral td { text-align: center !important; color: #444; font-style: italic; padding: 5px 8px; }
+    .lt-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; gap: 10px; }
+    .lt-empty-icon { font-size: 2.4rem; opacity: 0.25; }
+    .lt-empty-title { font-size: 0.95rem; font-weight: 700; color: #666; }
+    .lt-empty-sub { font-size: 0.75rem; color: #444; text-align: center; }
     .lt-conn-error {
       background: #2a1a10; border: 1px solid #5a3010; border-radius: 6px;
       padding: 8px 14px; color: #ff9800; font-size: 0.8rem; margin-bottom: 10px;
@@ -752,7 +756,7 @@ async function renderLiveView(root, cfg) {
   _liveGames     = {};
   if (_liveInterval) { clearInterval(_liveInterval); _liveInterval = null; }
 
-  root.innerHTML = '<div class="lt-empty">Kein Live-Spiel gerade.</div>';
+  root.innerHTML = '<div class="lt-empty"><div class="lt-empty-icon">📡</div><div class="lt-empty-title">Kein Live-Spiel gerade.</div><div class="lt-empty-sub">Sobald ein Spiel beginnt, erscheint der Ticker hier.</div></div>';
 
   DataStore.subscribe('ticks-update', function(data) {
     var gameId   = data.gameId;
@@ -819,7 +823,7 @@ async function renderLiveView(root, cfg) {
     if (el) el.parentNode && el.parentNode.removeChild(el);
     delete _liveGames[data.gameId];
     if (Object.keys(_liveGames).length === 0) {
-      root.innerHTML = '<div class="lt-empty">Kein Live-Spiel gerade.</div>';
+      root.innerHTML = '<div class="lt-empty"><div class="lt-empty-icon">📡</div><div class="lt-empty-title">Kein Live-Spiel gerade.</div><div class="lt-empty-sub">Sobald ein Spiel beginnt, erscheint der Ticker hier.</div></div>';
     }
   });
 
