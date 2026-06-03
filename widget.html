@@ -136,6 +136,19 @@
       .score-box .score { font-size: 1rem; }
       .game-row-logo { display: none; }
     }
+    /* Standings table: hide EP+GP at ≤480px, also hide Sp+U+PD at ≤360px */
+    /* Column order: 1=Pl 2=Mannschaft 3=Sp 4=S 5=U 6=N 7=EP 8=GP 9=PD 10=SQ */
+    @media (max-width: 480px) {
+      .standings-table th:nth-child(7), .standings-table td:nth-child(7),
+      .standings-table th:nth-child(8), .standings-table td:nth-child(8) { display: none; }
+      .standings-table { font-size: 0.8rem; }
+      .standings-table td, .standings-table th { padding: 7px 4px; }
+    }
+    @media (max-width: 360px) {
+      .standings-table th:nth-child(3), .standings-table td:nth-child(3),
+      .standings-table th:nth-child(5), .standings-table td:nth-child(5),
+      .standings-table th:nth-child(9), .standings-table td:nth-child(9) { display: none; }
+    }
     .load-more { display:block; width:100%; margin:6px 0 0; padding:6px 0;
       background:none; border:1px solid var(--accent); border-radius:4px;
       color:var(--accent); font-size:0.85rem; cursor:pointer; }
@@ -971,7 +984,7 @@ function renderStandingsTable(entry, teamIds, liveTeamIds) {
     return '<tr id="row-' + row.team_id + '" class="' + cls.trim() + '">'
       + '<td class="col-rank">' + (i + 1) + '.</td>'
       + '<td class="col-team">'
-      + (TEAM_LOGOS[row.team_id] ? '<img src="' + TEAM_LOGOS[row.team_id] + '" class="team-logo" loading="lazy" onerror="this.style.display=\'none\'">' : '')
+      + (TEAM_LOGOS[row.team_id] ? '<img src="' + TEAM_LOGOS[row.team_id] + '" class="team-logo" alt="" loading="lazy">' : '')
       + liveBadge + escapeHtml(row.team_name) + '</td>'
       + '<td>' + row.Sp + '</td>'
       + '<td>' + row.S  + '</td>'
