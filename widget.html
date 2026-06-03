@@ -139,15 +139,17 @@
     .standings-table th abbr { text-decoration: none; cursor: default; }
     .standings-table th .th-full { display: inline; }
     .standings-table th .th-abbr { display: none; }
-    /* Standings table: hide EP+GP at ≤480px, also hide Sp+U+PD at ≤360px */
+    /* Standings table: abbreviate headers at ≤700px; hide EP+GP at ≤480px; hide Sp+U+PD at ≤360px */
     /* Column order: 1=Pl 2=Mannschaft 3=Sp 4=S 5=U 6=N 7=EP 8=GP 9=PD 10=SQ */
+    @media (max-width: 700px) {
+      .standings-table th .th-full { display: none; }
+      .standings-table th .th-abbr { display: inline; }
+    }
     @media (max-width: 480px) {
       .standings-table th:nth-child(7), .standings-table td:nth-child(7),
       .standings-table th:nth-child(8), .standings-table td:nth-child(8) { display: none; }
       .standings-table { font-size: 0.8rem; }
       .standings-table td, .standings-table th { padding: 7px 4px; }
-      .standings-table th .th-full { display: none; }
-      .standings-table th .th-abbr { display: inline; }
     }
     @media (max-width: 360px) {
       .standings-table th:nth-child(3), .standings-table td:nth-child(3),
