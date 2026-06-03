@@ -136,6 +136,9 @@
       .score-box .score { font-size: 1rem; }
       .game-row-logo { display: none; }
     }
+    .standings-table th abbr { text-decoration: none; cursor: default; }
+    .standings-table th .th-full { display: inline; }
+    .standings-table th .th-abbr { display: none; }
     /* Standings table: hide EP+GP at ≤480px, also hide Sp+U+PD at ≤360px */
     /* Column order: 1=Pl 2=Mannschaft 3=Sp 4=S 5=U 6=N 7=EP 8=GP 9=PD 10=SQ */
     @media (max-width: 480px) {
@@ -143,6 +146,8 @@
       .standings-table th:nth-child(8), .standings-table td:nth-child(8) { display: none; }
       .standings-table { font-size: 0.8rem; }
       .standings-table td, .standings-table th { padding: 7px 4px; }
+      .standings-table th .th-full { display: none; }
+      .standings-table th .th-abbr { display: inline; }
     }
     @media (max-width: 360px) {
       .standings-table th:nth-child(3), .standings-table td:nth-child(3),
@@ -969,10 +974,16 @@ function renderStandingsTable(entry, teamIds, liveTeamIds) {
     return '<div class="standings-empty">Keine Tabellendaten verfügbar.</div>';
   }
   var thead = '<thead><tr>'
-    + '<th class="col-rank">Pl.</th>'
+    + '<th class="col-rank"><span class="th-full">Platz</span><abbr class="th-abbr" title="Platz">Pl.</abbr></th>'
     + '<th class="col-team">Mannschaft</th>'
-    + '<th>Sp</th><th>S</th><th>U</th><th>N</th>'
-    + '<th>EP</th><th>GP</th><th>PD</th><th>SQ</th>'
+    + '<th><span class="th-full">Spiele</span><abbr class="th-abbr" title="Spiele">Sp</abbr></th>'
+    + '<th><span class="th-full">Siege</span><abbr class="th-abbr" title="Siege">S</abbr></th>'
+    + '<th><span class="th-full">Unentschieden</span><abbr class="th-abbr" title="Unentschieden">U</abbr></th>'
+    + '<th><span class="th-full">Niederlagen</span><abbr class="th-abbr" title="Niederlagen">N</abbr></th>'
+    + '<th><span class="th-full">Ehrenpunkte</span><abbr class="th-abbr" title="Ehrenpunkte">EP</abbr></th>'
+    + '<th><span class="th-full">Gamepunkte</span><abbr class="th-abbr" title="Gamepunkte">GP</abbr></th>'
+    + '<th><span class="th-full">Punktedifferenz</span><abbr class="th-abbr" title="Punktedifferenz">PD</abbr></th>'
+    + '<th><span class="th-full">Siegquotient</span><abbr class="th-abbr" title="Siegquotient">SQ</abbr></th>'
     + '</tr></thead>';
   var restricted = entry.promotion_restricted || [];
   var rows = entry.rows.map(function(row, i) {
@@ -985,7 +996,7 @@ function renderStandingsTable(entry, teamIds, liveTeamIds) {
       + '<td class="col-rank">' + (i + 1) + '.</td>'
       + '<td class="col-team">'
       + (TEAM_LOGOS[row.team_id] ? '<img src="' + TEAM_LOGOS[row.team_id] + '" class="team-logo" alt="" loading="lazy">' : '')
-      + liveBadge + escapeHtml(row.team_name) + '</td>'
+      + liveBadge + escapeHtml(resolveTeamName(row.team_name)) + '</td>'
       + '<td>' + row.Sp + '</td>'
       + '<td>' + row.S  + '</td>'
       + '<td>' + row.U  + '</td>'
