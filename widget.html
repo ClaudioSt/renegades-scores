@@ -976,16 +976,16 @@ function renderStandingsTable(entry, teamIds, liveTeamIds) {
     return '<div class="standings-empty">Keine Tabellendaten verfügbar.</div>';
   }
   var thead = '<thead><tr>'
-    + '<th class="col-rank"><span class="th-full">Platz</span><abbr class="th-abbr" title="Platz">Pl.</abbr></th>'
+    + '<th class="col-rank">#</th>'
     + '<th class="col-team">Mannschaft</th>'
     + '<th><span class="th-full">Spiele</span><abbr class="th-abbr" title="Spiele">Sp</abbr></th>'
     + '<th><span class="th-full">Siege</span><abbr class="th-abbr" title="Siege">S</abbr></th>'
     + '<th><span class="th-full">Unentschieden</span><abbr class="th-abbr" title="Unentschieden">U</abbr></th>'
     + '<th><span class="th-full">Niederlagen</span><abbr class="th-abbr" title="Niederlagen">N</abbr></th>'
-    + '<th><span class="th-full">Ehrenpunkte</span><abbr class="th-abbr" title="Ehrenpunkte">EP</abbr></th>'
-    + '<th><span class="th-full">Gamepunkte</span><abbr class="th-abbr" title="Gamepunkte">GP</abbr></th>'
-    + '<th><span class="th-full">Punktedifferenz</span><abbr class="th-abbr" title="Punktedifferenz">PD</abbr></th>'
-    + '<th><span class="th-full">Siegquotient</span><abbr class="th-abbr" title="Siegquotient">SQ</abbr></th>'
+    + '<th><span class="th-full">Punkte erzielt</span><abbr class="th-abbr" title="Punkte erzielt">EP</abbr></th>'
+    + '<th><span class="th-full">Punkte kassiert</span><abbr class="th-abbr" title="Punkte kassiert">GP</abbr></th>'
+    + '<th><span class="th-full">Differenz</span><abbr class="th-abbr" title="Differenz">+/−</abbr></th>'
+    + '<th><span class="th-full">Siegquote</span><abbr class="th-abbr" title="Siegquote">SQ</abbr></th>'
     + '</tr></thead>';
   var restricted = entry.promotion_restricted || [];
   var rows = entry.rows.map(function(row, i) {
