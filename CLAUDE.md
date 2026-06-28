@@ -13,7 +13,8 @@ pre-fetched daily into `snapshot.json` to avoid CORS and performance issues.
 | `generator.html` | Admin tool — team search + config → generates iframe embed code |
 | `snapshot.json` | Pre-built data cache (2.9 MB, gzipped ~560 KB by GitHub Pages) |
 | `_gen_snapshot.js` | Node.js script that builds snapshot.json — run locally or via GitHub Actions |
-| `.github/workflows/update-snapshot.yml` | Daily refresh at 3 AM UTC (5 AM CEST) |
+| `.github/workflows/update-snapshot.yml` | Daily full refresh at 3 AM UTC (5 AM CEST) |
+| `.github/workflows/update-snapshot-live.yml` | Every 5 min, refetches only today's gamedays (6-20 Uhr Berlin time, gated in-script) |
 
 Old/prototype files not in active use: `renegades_scores.html`, `test.html`, `_snapshot.js`.
 
@@ -80,10 +81,15 @@ node _gen_snapshot.js
 
 # Rebuild mode (~15 min): keeps existing gameday data, re-fetches play-by-play + team names
 node _gen_snapshot.js --rebuild
+
+# Live mode (seconds): refetches only today's gamedays' games + logs; no-op if no
+# gameday today or outside 6-20 Uhr Berlin time (run by update-snapshot-live.yml every 5 min)
+node _gen_snapshot.js --today
 ```
 
 `--rebuild` is used when the play-by-play parsing logic changes or new past games need logs added.
 Full run is used when new gamedays appear (normally done by GitHub Actions daily).
+`--today` is used for live score polling during active gamedays (done by GitHub Actions every 5 min).
 
 ## Coding rules
 - Pure vanilla HTML/CSS/JS — no build step, no frameworks, no npm
