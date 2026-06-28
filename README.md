@@ -27,6 +27,7 @@ This script makes every widget on the page automatically resize to fit its conte
 ```html
 <script>
 window.addEventListener('message', function(e) {
+  if (e.origin !== 'https://claudiost.github.io') return;
   if (e.data && e.data.type === 'iframeHeight') {
     var frames = document.getElementsByTagName('iframe');
     for (var i = 0; i < frames.length; i++) {

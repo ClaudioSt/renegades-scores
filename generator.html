@@ -367,6 +367,7 @@ document.getElementById('generate-btn').addEventListener('click', function() {
 
   var listenerCode = '<script>'
     + '\nwindow.addEventListener(\'message\',function(e){'
+    + 'if(e.origin!==\'https://claudiost.github.io\')return;'
     + 'if(e.data&&e.data.type===\'iframeHeight\'){'
     + 'var fs=document.getElementsByTagName(\'iframe\');'
     + 'for(var i=0;i<fs.length;i++){'
