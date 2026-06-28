@@ -259,7 +259,7 @@ function buildTeams(withGames, teamNameMap) {
     let logDone = 0, logGot = 0;
     for (const gd of logGds) {
       for (const game of gd.games) {
-        if (game.id && !game.log && game.status === 'Beendet') {
+        if (game.id && !game.log && game.status === 'beendet') {
           try {
             const html = await fetchHTML('https://leaguesphere.app/gamedays/gameday/' + gd.id + '/game/' + game.id);
             const log  = parseGameLog(html);
