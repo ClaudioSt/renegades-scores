@@ -2,7 +2,8 @@ name: Update snapshot
 
 on:
   schedule:
-    - cron: '0 3 * * *'   # 3 AM UTC = 5 AM CEST, before matches start
+    - cron: '0 3 * * *'        # 3 AM UTC = 5 AM CEST, daily full refresh before matches start
+    - cron: '*/30 7-19 * * *'  # every 30 min, 7-19 UTC = 9-21 CEST — matchday-only, see guard step below
   workflow_dispatch:        # allow manual trigger
 
 permissions:
@@ -18,10 +19,22 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Check if today is a matchday
+        id: check
+        run: |
+          HAS_GAMEDAY=$(node -e "
+            const today = new Date().toISOString().slice(0, 10);
+            const snapshot = require('./snapshot.json');
+            console.log(snapshot.gamedays.some(gd => gd.date === today));
+          ")
+          echo "has_gameday=$HAS_GAMEDAY" >> "$GITHUB_OUTPUT"
+
       - name: Fetch all gamedays + games
+        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 3 * * *' || steps.check.outputs.has_gameday == 'true'
         run: node _gen_snapshot.js
 
       - name: Commit if changed
+        if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 3 * * *' || steps.check.outputs.has_gameday == 'true'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
