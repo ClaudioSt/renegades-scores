@@ -1,6 +1,7 @@
 // Fetches all gameday metadata + games and writes snapshot.json
 // Full run:    node _gen_snapshot.js           (~5 min for 734 gamedays, batch 5 + 100ms delay)
 // Rebuild:     node _gen_snapshot.js --rebuild  (re-index teams + re-fetch game logs for current season)
+// Live update: node _gen_snapshot.js --today    (refetch only today's gamedays; no-op outside 6-20 Berlin time)
 
 const API_BASE       = 'https://leaguesphere.app/api';
 const BATCH_SIZE     = 5;
@@ -196,6 +197,53 @@ function buildTeams(withGames, teamNameMap) {
 (async () => {
   const leagueConfig = loadLeagueConfig('./league-config.json');
   console.log('League config loaded: ' + Object.keys(leagueConfig).join(', '));
+
+  if (process.argv.includes('--today')) {
+    const berlinHour = Number(new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Berlin', hour: '2-digit', hour12: false,
+    }).format(new Date()));
+    if (berlinHour < 6 || berlinHour >= 20) {
+      console.log('Outside 6-20 Berlin time window (hour: ' + berlinHour + ') — skipping.');
+      return;
+    }
+
+    const berlinDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date());
+    const existing    = JSON.parse(require('fs').readFileSync('snapshot.json', 'utf8'));
+    const todaysGds   = existing.gamedays.filter(gd => gd.date === berlinDate);
+    if (!todaysGds.length) {
+      console.log('No gamedays today (' + berlinDate + ') — skipping.');
+      return;
+    }
+
+    console.log(todaysGds.length + ' gameday(s) today — refreshing games…');
+    for (const gd of todaysGds) {
+      try {
+        const games = await fetchJSON(API_BASE + '/gamedays/' + gd.id + '/games/?format=json');
+        gd.games = games.map(slimGame);
+      } catch (e) {}
+    }
+
+    let logGot = 0;
+    for (const gd of todaysGds) {
+      for (const game of gd.games) {
+        if (game.id && !game.log && game.status === 'beendet') {
+          try {
+            const html = await fetchHTML('https://leaguesphere.app/gamedays/gameday/' + gd.id + '/game/' + game.id);
+            const log  = parseGameLog(html);
+            if (log) { game.log = log; logGot++; }
+          } catch (e) {}
+        }
+      }
+    }
+    console.log('  ' + logGot + ' game log(s) fetched');
+
+    const standings = computeStandings(leagueConfig, existing.gamedays);
+    const snapshot  = Object.assign({}, existing, { standings });
+    const json      = JSON.stringify(snapshot);
+    require('fs').writeFileSync('snapshot.json', json, 'utf8');
+    console.log('Written snapshot.json (today-only update)');
+    return;
+  }
 
   const rebuild = process.argv.includes('--rebuild');
   let withGames;

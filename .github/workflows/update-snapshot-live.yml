@@ -1,0 +1,37 @@
+name: Update snapshot (live)
+
+on:
+  schedule:
+    # Every 5 min, UTC 4:00-18:55 — superset of 6-20 Berlin time across both
+    # CET and CEST. The script itself re-checks the exact Berlin-local window
+    # and gameday date, so it's a safe no-op outside those bounds.
+    - cron: '*/5 4-18 * * *'
+  workflow_dispatch:        # allow manual trigger
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-snapshot-live
+  cancel-in-progress: true
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Refresh today's gamedays only
+        run: node _gen_snapshot.js --today
+
+      - name: Commit if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add snapshot.json
+          git diff --staged --quiet || git commit -m "chore: live update $(date -u +%Y-%m-%dT%H:%M)Z"
+          git push
