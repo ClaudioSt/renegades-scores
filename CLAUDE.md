@@ -85,6 +85,9 @@ node _gen_snapshot.js --rebuild
 # Live mode (seconds): refetches only today's gamedays' games + logs; no-op if no
 # gameday today or outside 6-20 Uhr Berlin time (run by update-snapshot-live.yml every 5 min)
 node _gen_snapshot.js --today
+
+# Manual catch-up: refetch gamedays from the last N days (ignores the time-of-day gate)
+node _gen_snapshot.js --today --days=3
 ```
 
 `--rebuild` is used when the play-by-play parsing logic changes or new past games need logs added.

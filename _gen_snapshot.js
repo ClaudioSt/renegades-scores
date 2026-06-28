@@ -1,7 +1,8 @@
 // Fetches all gameday metadata + games and writes snapshot.json
 // Full run:    node _gen_snapshot.js           (~5 min for 734 gamedays, batch 5 + 100ms delay)
 // Rebuild:     node _gen_snapshot.js --rebuild  (re-index teams + re-fetch game logs for current season)
-// Live update: node _gen_snapshot.js --today    (refetch only today's gamedays; no-op outside 6-20 Berlin time)
+// Live update: node _gen_snapshot.js --today              (refetch only today's gamedays; no-op outside 6-20 Berlin time)
+//              node _gen_snapshot.js --today --days=N     (manual: refetch gamedays from the last N days, ignores time window)
 
 const API_BASE       = 'https://leaguesphere.app/api';
 const BATCH_SIZE     = 5;
@@ -199,23 +200,32 @@ function buildTeams(withGames, teamNameMap) {
   console.log('League config loaded: ' + Object.keys(leagueConfig).join(', '));
 
   if (process.argv.includes('--today')) {
-    const berlinHour = Number(new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Europe/Berlin', hour: '2-digit', hour12: false,
-    }).format(new Date()));
-    if (berlinHour < 6 || berlinHour >= 20) {
-      console.log('Outside 6-20 Berlin time window (hour: ' + berlinHour + ') — skipping.');
-      return;
+    const daysArg = process.argv.find(a => a.startsWith('--days='));
+    const days    = daysArg ? Number(daysArg.slice('--days='.length)) : 1;
+
+    if (days === 1) {
+      const berlinHour = Number(new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Berlin', hour: '2-digit', hour12: false,
+      }).format(new Date()));
+      if (berlinHour < 6 || berlinHour >= 20) {
+        console.log('Outside 6-20 Berlin time window (hour: ' + berlinHour + ') — skipping.');
+        return;
+      }
     }
 
     const berlinDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date());
-    const existing    = JSON.parse(require('fs').readFileSync('snapshot.json', 'utf8'));
-    const todaysGds   = existing.gamedays.filter(gd => gd.date === berlinDate);
+    const startDate  = new Date(berlinDate + 'T00:00:00Z');
+    startDate.setUTCDate(startDate.getUTCDate() - (days - 1));
+    const sinceDate  = startDate.toISOString().slice(0, 10);
+
+    const existing  = JSON.parse(require('fs').readFileSync('snapshot.json', 'utf8'));
+    const todaysGds = existing.gamedays.filter(gd => gd.date >= sinceDate && gd.date <= berlinDate);
     if (!todaysGds.length) {
-      console.log('No gamedays today (' + berlinDate + ') — skipping.');
+      console.log('No gamedays in range ' + sinceDate + '..' + berlinDate + ' — skipping.');
       return;
     }
 
-    console.log(todaysGds.length + ' gameday(s) today — refreshing games…');
+    console.log(todaysGds.length + ' gameday(s) in range ' + sinceDate + '..' + berlinDate + ' — refreshing games…');
     for (const gd of todaysGds) {
       try {
         const games = await fetchJSON(API_BASE + '/gamedays/' + gd.id + '/games/?format=json');
