@@ -639,6 +639,7 @@ var DataStore = (function() {
       });
     });
     emit('snapshot-loaded', _snap);
+    _pollNow();
     _int = setInterval(function() { _pollNow(); }, WATCH_MS);
   }
 
