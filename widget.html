@@ -735,9 +735,10 @@ var DataStore = (function() {
   };
 })();
 
-function renderFutureSection(entries, teamId, visibleExtras) {
+function renderFutureSection(entries, teamId, visibleExtras, today) {
   if (!entries.length) return '<div class="no-data">Keine kommenden Spieltage geplant.</div>';
   visibleExtras = visibleExtras || 0;
+  today = today || new Date().toISOString().slice(0, 10);
   var next      = entries[0];
   var extras    = entries.slice(1);
   var html      = '';
@@ -745,7 +746,7 @@ function renderFutureSection(entries, teamId, visibleExtras) {
     var shown     = extras.slice(0, visibleExtras);
     var remaining = extras.length - visibleExtras;
     var shownHtml = shown.slice().reverse()
-      .map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, false); }).join('');
+      .map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, e.gd.date <= today); }).join('');
     var buttonHtml = remaining > 0
       ? '<button class="toggle-more-future" data-team="' + teamId + '" data-visible="' + visibleExtras + '">'
         + 'Nächste Spieltage (' + remaining + ')'
@@ -753,7 +754,7 @@ function renderFutureSection(entries, teamId, visibleExtras) {
       : '';
     html = buttonHtml + shownHtml;
   }
-  html += renderGamedayCard(next.gd, next.games, teamId, false);
+  html += renderGamedayCard(next.gd, next.games, teamId, next.gd.date <= today);
   return html;
 }
 
@@ -900,7 +901,7 @@ async function renderSpielplan(root, cfg) {
       var snapTeam = snap.teams.find(function(t) { return t.id === teamId; });
       if (els.title && snapTeam) els.title.textContent = snapTeam.name;
       if (els.past)   els.past.innerHTML   = renderPastSection(past, teamId, cfg.past);
-      if (els.future) els.future.innerHTML = renderFutureSection(cappedFuture, teamId, 0);
+      if (els.future) els.future.innerHTML = renderFutureSection(cappedFuture, teamId, 0, today);
     });
   });
 
@@ -955,7 +956,7 @@ async function renderSpielplan(root, cfg) {
         .sort(function(a, b) { return a.date.localeCompare(b.date); })
         .map(function(gd) { return { id: gd.id, gd: gd, games: gd.games }; });
       var cappedFuture = (cfg.future > 0) ? future.slice(0, cfg.future) : future;
-      futureEl.innerHTML = renderFutureSection(cappedFuture, teamId, newVisible);
+      futureEl.innerHTML = renderFutureSection(cappedFuture, teamId, newVisible, today);
     }
   });
 
