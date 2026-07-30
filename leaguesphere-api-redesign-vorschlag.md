@@ -52,6 +52,7 @@ Kurzübersicht aller Beobachtungen aus diesem Bericht, bevor sie im Detail ausge
 | 8 | `DRAFT`-Spieltage (laut API-Konvention "nicht veröffentlicht") sind trotzdem öffentlich ohne Auth abrufbar — Entwurfsstatus ist rein kosmetisch, keine echte Zugriffskontrolle | Sicherheit |
 | 9 | `page_size` scheinbar unbegrenzt (9999 liefert alle Datensätze in einem Request) — kein serverseitiges Rate-Limiting beobachtet | Sicherheit |
 | 10 | `author`-Feld (interne User-ID des Erstellers) wird ungeschützt in einer öffentlichen, unauthentifizierten Response mitgeliefert | Sicherheit |
+| 11 | **Auch schreibende Aufrufe (POST/PUT/DELETE) laut Beobachtung ohne Authentifizierung erreichbar** — nicht nur Lesezugriff, sondern potenziell Datenänderung/-löschung durch beliebige Clients | Sicherheit (kritisch) |
 
 ---
 
@@ -187,14 +188,36 @@ von der öffentlichen Repräsentation getrennt sind — ein API-Response-Schema 
 "public view" und "internal/admin view" unterscheiden, statt ein einziges Objekt für beide
 Zwecke zu benutzen.
 
-### 3.5 Einordnung
+### 3.5 Schreibende Aufrufe (POST/PUT/DELETE) ohne Authentifizierung
 
-Keiner der Punkte ist ein klassischer "Exploit" (kein Zugriff auf fremde Konten, keine
-Schreibrechte beobachtet, keine Passwörter/Secrets involviert) — es handelt sich um
-**Absenz von Zugriffskontrolle und Ratenbegrenzung** bei einer ansonsten als "öffentlich"
-gedachten Sport-API. Relevant wird das vor allem dort, wo LeagueSphere selbst zwischen
-öffentlich und nicht-öffentlich unterscheiden will (z. B. `DRAFT`-Status) — die Trennung
-existiert nur in der UI, nicht auf API-Ebene.
+Der bislang schwerwiegendste Punkt: Laut Beobachtung sind nicht nur die lesenden (`GET`-)
+Endpoints ohne Authentifizierung erreichbar, sondern auch schreibende Operationen
+(`POST`/`PUT`/`DELETE`). Das ist qualitativ etwas anderes als die übrigen Punkte in diesem
+Bericht — es geht dann nicht mehr um "wer darf öffentliche Sportdaten lesen", sondern um
+**Integrität und Verfügbarkeit der Daten selbst**: Ohne Auth-Prüfung könnte jeder beliebige
+Client fremde Spieltage, Spielergebnisse oder Team-Daten anlegen, verändern oder löschen —
+für eine Plattform, auf der reale Vereine/Verbände ihre offiziellen Ligadaten pflegen, wäre
+das ein kritisches Risiko (Datenmanipulation, Datenverlust, Sabotage einzelner Ligen).
+
+Für dieses Projekt selbst ändert sich dadurch nichts an der Implementierung — `_gen_snapshot.js`
+und `widget.html` führen ausschließlich lesende `GET`-Requests aus und sollten das auch
+weiterhin so halten. Der Punkt ist hier rein als **Beobachtung für den Bericht** dokumentiert,
+nicht als Aufforderung, schreibende Aufrufe gegen die Produktivinstanz von LeagueSphere zu
+testen oder tatsächlich Daten zu verändern — das wäre ein Eingriff in ein fremdes,
+produktives System ohne Autorisierung. Falls das tatsächlich zutrifft, sollte es LeagueSphere
+über einen verantwortungsvollen Meldeweg (Responsible Disclosure, z. B. Kontakt zum
+Betreiber) mitgeteilt werden, statt es selbst weiter zu verifizieren.
+
+### 3.6 Einordnung
+
+Die reinen Lese-Punkte (3.1–3.4) sind kein klassischer "Exploit" (kein Zugriff auf fremde
+Konten, keine Passwörter/Secrets involviert) — es handelt sich um **Absenz von
+Zugriffskontrolle und Ratenbegrenzung** bei einer ansonsten als "öffentlich" gedachten
+Sport-API. Relevant wird das vor allem dort, wo LeagueSphere selbst zwischen öffentlich und
+nicht-öffentlich unterscheiden will (z. B. `DRAFT`-Status) — die Trennung existiert nur in
+der UI, nicht auf API-Ebene. Der Punkt in 3.5 (fehlende Auth auf schreibenden Endpoints) ist
+davon getrennt zu bewerten und deutlich kritischer einzustufen, da er die Datenintegrität der
+gesamten Plattform betrifft, nicht nur die Sichtbarkeit von Daten.
 
 ---
 
@@ -305,6 +328,7 @@ machen.
 | 3 | `expand`-Parameter für Gamedays→Games | Reduziert Requestzahl deutlich, auch ohne Team-Endpoint |
 | 3 | Normalisierte Status-/Format-Enums | Reduziert Parsing-Sonderfälle, keine Breaking-Change-Pflicht wenn zusätzlich zum Altfeld eingeführt |
 | 4 | `/api/teams/`-Suchendpoint (JSON) | Ersetzt HTML-Scrape, geringer Aufwand für großen Robustheitsgewinn |
+| **0 (kritisch, Sicherheit)** | **Authentifizierung/Autorisierung für alle schreibenden Endpoints (POST/PUT/DELETE)** | Ohne Prüfung könnten beliebige Clients fremde Liga-/Spieldaten verändern oder löschen — Integritätsrisiko für die gesamte Plattform |
 | 2 (Sicherheit) | Echte Zugriffskontrolle für `DRAFT`-Status statt reinem UI-Flag | Entwurfsdaten sollen laut eigener Konvention nicht öffentlich sein, sind es aber |
 | 3 (Sicherheit) | Dokumentiertes Rate-Limiting (`429`/`Retry-After`) | Aktuell keine serverseitige Grenze bei beliebigem `page_size` beobachtet |
 | 4 (Sicherheit) | Trennung public/admin-Felder (z. B. `author` nicht in der öffentlichen Response) | Geringer Aufwand, vermeidet unnötiges Info-Disclosure |
@@ -328,6 +352,9 @@ Daneben zeigt der Sicherheits-Review, dass die API zwar bewusst öffentlich ist 
 Sportergebnisse sinnvoll ist), aber keine echte Zugriffskontrolle kennt: Der `DRAFT`-Status
 ist nur ein UI-Hinweis, kein Server-seitiges Zugriffsrecht, es gibt kein beobachtbares
 Rate-Limiting, und interne Felder wie `author` landen ungefiltert in der öffentlichen
-Antwort. Keiner dieser Punkte ist für sich genommen kritisch, zusammen zeigen sie aber, dass
-"öffentlich, weil kein Auth nötig ist" und "bewusst als öffentlich gestaltet" hier nicht
-dasselbe sind.
+Antwort. Am schwerwiegendsten ist die Beobachtung, dass offenbar auch schreibende Aufrufe
+(POST/PUT/DELETE) ohne Authentifizierung möglich sind — das betrifft nicht mehr nur die
+Sichtbarkeit, sondern die Integrität der Daten, und sollte mit höchster Priorität behoben
+bzw. LeagueSphere verantwortungsvoll gemeldet werden. Die übrigen Punkte sind für sich
+genommen weniger kritisch, zeigen aber in Summe, dass "öffentlich, weil kein Auth nötig ist"
+und "bewusst als öffentlich gestaltet" hier nicht dasselbe sind.
