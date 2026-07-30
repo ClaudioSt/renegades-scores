@@ -36,6 +36,25 @@ filtert/aggregiert. Das ist der Kernbefund, der auch dieses Projekt gezwungen ha
 
 ---
 
+## 1a. Auffälligkeiten auf einen Blick
+
+Kurzübersicht aller Beobachtungen aus diesem Bericht, bevor sie im Detail ausgeführt werden:
+
+| # | Beobachtung | Kategorie |
+|---|---|---|
+| 1 | Keine Team-Ansicht/Endpoint — Team-Historie nur durch Laden **aller** 734 Spieltage rekonstruierbar | Struktur |
+| 2 | Keine Tabellen-/Standings-Ressource — Ligaordnung (Punktequotient, Aufstiegssperren) muss clientseitig neu implementiert werden | Struktur |
+| 3 | `?league=`-Filter auf `/api/gamedays/` wirkungslos, keine adressierbare Liga/Saison-Ressource | Struktur |
+| 4 | Play-by-play nur als HTML ohne CORS, kein JSON-Endpoint | Struktur |
+| 5 | Teamnamen nur über zweckentfremdeten `/passcheck/`-HTML-Scrape auflösbar, nicht vollständig | Struktur |
+| 6 | Uneinheitliche Status-/Format-Werte (leerer String vs. `DRAFT` vs. `PUBLISHED`; lokalisierte Strings wie `"beendet"`) | Struktur |
+| 7 | **Keine Authentifizierung für irgendeinen Call** — komplette API (inkl. aller Ligen/Teams, nicht nur der hier relevanten) ist ohne Auth lesbar | Sicherheit |
+| 8 | `DRAFT`-Spieltage (laut API-Konvention "nicht veröffentlicht") sind trotzdem öffentlich ohne Auth abrufbar — Entwurfsstatus ist rein kosmetisch, keine echte Zugriffskontrolle | Sicherheit |
+| 9 | `page_size` scheinbar unbegrenzt (9999 liefert alle Datensätze in einem Request) — kein serverseitiges Rate-Limiting beobachtet | Sicherheit |
+| 10 | `author`-Feld (interne User-ID des Erstellers) wird ungeschützt in einer öffentlichen, unauthentifizierten Response mitgeliefert | Sicherheit |
+
+---
+
 ## 2. Konkrete strukturelle Probleme
 
 ### 2.1 Kein Team-Endpoint → N+1-Problem beim Datenabruf
@@ -112,12 +131,79 @@ in der API praktisch nur als Anzeigetext (`league_display`), nicht als abfragbar
 
 ---
 
-## 3. Wie eine sinnvoller aufgebaute API aussehen sollte
+## 3. Sicherheits-Review: API ohne Authentifizierung
+
+Zusätzlich zur strukturellen Analyse ein kurzer Blick auf die Sicherheitsseite der API, da
+`CLAUDE.md` und die Integrations-Doku dieses Repos bereits festhalten: *"LeagueSphere API
+(public, no auth)"*. Das ist für dieses Projekt praktisch (kein Auth-Handling nötig), aus
+API-Design-Sicht aber bemerkenswert offen:
+
+### 3.1 Keine Authentifizierung für sämtliche Endpoints
+
+Alle bekannten Endpoints (`/api/gamedays/`, `/api/gamedays/{id}/games/`,
+`/passcheck/team/all/list/`, `/gamedays/gameday/{id}/game/{game_id}`, `/liveticker/`) sind
+ohne API-Key, Token oder Session-Cookie erreichbar. Das betrifft nicht nur die für dieses
+Projekt relevanten Ligen (DKB DFFL, FF BL, RL Bayern), sondern **alle** Ligen und Teams, die
+LeagueSphere insgesamt verwaltet — die komplette Plattform-Datenbasis ist per einfachem
+`GET`-Request auslesbar. Für öffentliche Sportergebnisse ist das nicht per se falsch (die
+Ergebnisse sollen ja öffentlich sein), aber es bedeutet auch: Es gibt keine Unterscheidung
+zwischen "öffentlich sichtbaren" und "nur für Vereine/Verband sichtbaren" Daten auf
+API-Ebene — die einzige Kontrolle ist, ob ein Client die richtige ID/den richtigen Pfad kennt
+("security through obscurity" statt echter Autorisierung).
+
+### 3.2 `DRAFT`-Status ist keine echte Zugriffskontrolle
+
+Aus der Feldanalyse (`leaguesphere-api-analysis.md`, Abschnitt 2, Feld `status`): Spieltage
+mit Status `""` oder `"DRAFT"` gelten laut Beobachtung als *"noch nicht offiziell
+veröffentlicht"* — sind aber über denselben unauthentifizierten Endpoint genauso abrufbar
+wie `"PUBLISHED"`-Spieltage, inklusive echter Spieldaten (bestätigt am Beispiel Spieltag 834).
+Das heißt: Der Entwurfsstatus ist ein reines UI-Flag für die LeagueSphere-Oberfläche selbst,
+aber **keine serverseitige Zugriffsbeschränkung**. Wer die ID eines Entwurfs-Spieltags kennt
+(oder einfach alle IDs durchprobiert/paginiert), sieht dieselben Daten wie nach der
+Veröffentlichung. Für einen Verband, der Entwürfe vor der Öffentlichkeit verbergen will, ist
+das ein Zielkonflikt zwischen der eigenen Konvention ("DRAFT = nicht öffentlich") und der
+tatsächlichen API-Implementierung ("DRAFT = trotzdem öffentlich lesbar"). Für dieses Projekt
+selbst ergibt sich daraus indirekt die Notwendigkeit, bewusst zu entscheiden, ob
+`snapshot.json` (welches öffentlich auf GitHub Pages liegt) auch `DRAFT`-Spieltage
+weiterverbreiten soll.
+
+### 3.3 Kein beobachtbares Rate-Limiting
+
+`page_size=1000` bzw. `9999` liefert laut Analyse alle 734 Spieltage in einem einzigen
+Request in ca. 12 Sekunden, ohne dass ein Limit, ein `429 Too Many Requests` oder ein
+Retry-After-Header beobachtet wurde. `_gen_snapshot.js` throttelt sich selbst (Batch-Größe 5,
+100 ms Pause, exponentielles Retry) rein aus Vorsicht/Fairness gegenüber dem Server — nicht,
+weil der Server das erzwingt. Ohne serverseitiges Rate-Limiting ist die API grundsätzlich
+anfällig für unabsichtliche oder mutwillige Überlastung durch Drittclients, die sich nicht
+so rücksichtsvoll verhalten wie dieses Projekt.
+
+### 3.4 Geringfügiges Info-Disclosure über `author`
+
+Das `author`-Feld auf Spieltagen (interne Nutzer-ID des Erstellers, siehe
+`leaguesphere-api-analysis.md` Abschnitt 2) wird ungefiltert in derselben öffentlichen,
+unauthentifizierten Response ausgeliefert wie die Spieldaten. Isoliert betrachtet harmlos
+(nur eine Zahl, kein Name), aber ein Beispiel dafür, dass interne/administrative Felder nicht
+von der öffentlichen Repräsentation getrennt sind — ein API-Response-Schema sollte zwischen
+"public view" und "internal/admin view" unterscheiden, statt ein einziges Objekt für beide
+Zwecke zu benutzen.
+
+### 3.5 Einordnung
+
+Keiner der Punkte ist ein klassischer "Exploit" (kein Zugriff auf fremde Konten, keine
+Schreibrechte beobachtet, keine Passwörter/Secrets involviert) — es handelt sich um
+**Absenz von Zugriffskontrolle und Ratenbegrenzung** bei einer ansonsten als "öffentlich"
+gedachten Sport-API. Relevant wird das vor allem dort, wo LeagueSphere selbst zwischen
+öffentlich und nicht-öffentlich unterscheiden will (z. B. `DRAFT`-Status) — die Trennung
+existiert nur in der UI, nicht auf API-Ebene.
+
+---
+
+## 4. Wie eine sinnvoller aufgebaute API aussehen sollte
 
 Der Leitgedanke: **API-Design entlang der Fragen, die Nutzer tatsächlich stellen** (Team,
 Liga/Tabelle, Spieltag), statt nur entlang der internen Datenbank-Struktur (Gameday → Games).
 
-### 3.1 Team als First-Class-Ressource
+### 4.1 Team als First-Class-Ressource
 
 ```
 GET /api/teams/{id}/
@@ -135,7 +221,7 @@ Damit entfällt der komplette "735-Requests-um-ein-Team-zu-finden"-Umweg. Ein Wi
 dieses hier bräuchte im Idealfall **einen** Request pro Team statt eines täglichen
 Full-Crawls von 734 Spieltagen.
 
-### 3.2 Tabelle/Standings als berechnete Server-Ressource
+### 4.2 Tabelle/Standings als berechnete Server-Ressource
 
 ```
 GET /api/leagues/{league_id}/seasons/{season}/standings/
@@ -147,7 +233,7 @@ weil nur LeagueSphere die Ligaordnung und die Zuordnung Spieltag→Liga→Saison
 Das würde `standings.js` und die komplette manuelle Pflege von `league-config.json` in diesem
 Repo überflüssig machen.
 
-### 3.3 Liga/Saison als adressierbare, filterbare Ressourcen
+### 4.3 Liga/Saison als adressierbare, filterbare Ressourcen
 
 ```
 GET /api/leagues/                       → Liste aller Ligen mit stabiler ID, Name, Ebene
@@ -158,7 +244,7 @@ GET /api/leagues/{id}/seasons/{s}/gamedays/   → Spieltage EINER Liga/Saison (f
 Der aktuell wirkungslose `?league=`-Parameter auf `/api/gamedays/` sollte entweder repariert
 oder durch verschachtelte, garantiert korrekte Routen ersetzt werden.
 
-### 3.4 Play-by-play als JSON mit CORS
+### 4.4 Play-by-play als JSON mit CORS
 
 ```
 GET /api/games/{id}/log/
@@ -170,7 +256,7 @@ Damit könnten Clients direkt aus dem Browser lesen, ohne einen serverseitigen S
 betreiben zu müssen – reine Lesezugriffe auf öffentliche Sportdaten sind kein
 Sicherheitsrisiko, das CORS-Sperren rechtfertigt.
 
-### 3.5 Batch-/Expand-Parameter gegen N+1
+### 4.5 Batch-/Expand-Parameter gegen N+1
 
 Selbst mit Team-Endpoint bleibt das Grundproblem: Spieltag-Liste und zugehörige Spiele sind
 getrennte Requests. Ein `expand`-Parameter würde das entschärfen:
@@ -180,7 +266,7 @@ GET /api/gamedays/?season=2026&expand=games
 → Spieltage inkl. eingebetteter Spiele in einem Response, statt 1 + N Requests
 ```
 
-### 3.6 Normalisierte, dokumentierte Enums
+### 4.6 Normalisierte, dokumentierte Enums
 
 - `status`: `draft | published` statt `""`/`"DRAFT"`/`"PUBLISHED"`
 - `game.status`: sprachneutrales Enum (`scheduled | live | finished`) statt lokalisierter
@@ -188,7 +274,7 @@ GET /api/gamedays/?season=2026&expand=games
 - `format`: kanonischer Slug (z. B. `nrw_u13_g1_f2`) statt Freitext mit inkonsistenten
   Leerzeichen/Unterstrichen – zusätzlich ein separates, lesbares `format_display`-Feld
 
-### 3.7 Ein echter Team-Suchindex statt HTML-Scrape
+### 4.7 Ein echter Team-Suchindex statt HTML-Scrape
 
 ```
 GET /api/teams/?search=Renegades
@@ -196,9 +282,19 @@ GET /api/teams/?search=Renegades
 ```
 ersetzt `/passcheck/team/all/list/` (HTML) als "eigentliche" Quelle für Teamnamen.
 
+### 4.8 Echte Zugriffskontrolle statt Status-Flag
+
+Analog zu 3.1/3.2: Wenn `DRAFT` tatsächlich "nicht öffentlich" bedeuten soll, müsste der
+Server das durchsetzen (z. B. `DRAFT`-Spieltage nur mit gültigem Autoren-/Verbands-Token
+ausliefern), statt es nur als Anzeigehinweis in der eigenen Oberfläche zu behandeln.
+Zusätzlich: interne Felder wie `author` gehören in eine separate "admin"-Repräsentation statt
+in dieselbe Response wie die öffentlichen Spieldaten, und ein dokumentiertes Rate-Limit
+(inkl. `429`/`Retry-After`) würde die API robuster gegen exzessive `page_size`-Abfragen
+machen.
+
 ---
 
-## 4. Priorisierung – was am meisten bringt
+## 5. Priorisierung – was am meisten bringt
 
 | Priorität | Maßnahme | Warum |
 |---|---|---|
@@ -209,10 +305,13 @@ ersetzt `/passcheck/team/all/list/` (HTML) als "eigentliche" Quelle für Teamnam
 | 3 | `expand`-Parameter für Gamedays→Games | Reduziert Requestzahl deutlich, auch ohne Team-Endpoint |
 | 3 | Normalisierte Status-/Format-Enums | Reduziert Parsing-Sonderfälle, keine Breaking-Change-Pflicht wenn zusätzlich zum Altfeld eingeführt |
 | 4 | `/api/teams/`-Suchendpoint (JSON) | Ersetzt HTML-Scrape, geringer Aufwand für großen Robustheitsgewinn |
+| 2 (Sicherheit) | Echte Zugriffskontrolle für `DRAFT`-Status statt reinem UI-Flag | Entwurfsdaten sollen laut eigener Konvention nicht öffentlich sein, sind es aber |
+| 3 (Sicherheit) | Dokumentiertes Rate-Limiting (`429`/`Retry-After`) | Aktuell keine serverseitige Grenze bei beliebigem `page_size` beobachtet |
+| 4 (Sicherheit) | Trennung public/admin-Felder (z. B. `author` nicht in der öffentlichen Response) | Geringer Aufwand, vermeidet unnötiges Info-Disclosure |
 
 ---
 
-## 5. Fazit
+## 6. Fazit
 
 Die aktuelle LeagueSphere-API bildet nur die interne Datenstruktur ab (Spieltag → Spiele),
 aber keine der Fragen, die Endnutzer typischerweise stellen (Team-Historie, Tabelle,
@@ -224,3 +323,11 @@ gehören). Die zwei Endpoints mit dem größten Hebel wären ein team-zentrierte
 Games-Endpoint und ein serverseitig berechneter Standings-Endpoint – beide würden den
 Großteil der Komplexität in diesem Repo (Snapshot-Crawling, Retry-Batching, manuelle
 Ligaordnung-Nachbildung) überflüssig machen.
+
+Daneben zeigt der Sicherheits-Review, dass die API zwar bewusst öffentlich ist (was für
+Sportergebnisse sinnvoll ist), aber keine echte Zugriffskontrolle kennt: Der `DRAFT`-Status
+ist nur ein UI-Hinweis, kein Server-seitiges Zugriffsrecht, es gibt kein beobachtbares
+Rate-Limiting, und interne Felder wie `author` landen ungefiltert in der öffentlichen
+Antwort. Keiner dieser Punkte ist für sich genommen kritisch, zusammen zeigen sie aber, dass
+"öffentlich, weil kein Auth nötig ist" und "bewusst als öffentlich gestaltet" hier nicht
+dasselbe sind.
