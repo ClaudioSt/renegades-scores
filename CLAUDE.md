@@ -86,6 +86,19 @@ Two rules keep git history from exploding, both covered by tests:
 Teams that appear only in the passcheck list (no games) get no slice; slices of teams that
 vanish from the data are deleted. Both workflows stage `api/` alongside `snapshot.json`.
 
+A slice carries names for **opponents and every club in its tables** — the standings list
+clubs the team never played, and `renderStandingsTable()` resolves each row's abbrev through
+the team index. Dropping those turns table rows into raw abbrevs (`Regen3` instead of
+`Regensburg Phoenix III`).
+
+The widget assembles a snapshot-shaped object from the slices (`mergeTeamSlices()`), so every
+renderer stays unchanged. `tests/slice-equivalence.test.js` asserts both paths produce
+byte-identical HTML — when adding a renderer that reads a new snapshot field, extend
+`buildTeamSlice()` too or that test will fail. Note it must prime `_teamNameByAbbrev` the way
+`loadSnapshot()` does, otherwise name regressions stay invisible.
+
+On failure the widget falls back to `snapshot.json`, so a broken API never blanks the embed.
+
 ## Standings tables (`league-config.json`)
 
 A league only gets a table if it is listed here. Spieltage are **derived** from the
@@ -123,6 +136,7 @@ so `name` must stay stable while a season is running.
 | `show_future` | `1` | `0` hides future section entirely |
 | `title` | `1` | `0` hides team title |
 | `compact` | `0` | `1` enables compact layout |
+| `api` | `api/v1/` | Slice base URL; `0` forces the full `snapshot.json` |
 
 Example: `widget.html?t=159&color=ffab00&past=5&compact=1`
 

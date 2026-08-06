@@ -52,11 +52,6 @@ function buildTeamSlice(snapshot, teamId) {
     gamedays.push(slim);
   }
 
-  // Opponent names, so the widget can resolve abbrevs without the full index
-  const teams = (snapshot.teams || [])
-    .filter(t => nameIds.has(t.id))
-    .map(t => ({ id: t.id, abbrev: t.abbrev, name: t.name }));
-
   // Only the tables belonging to leagues this team appears in
   const standings = {};
   for (const [leagueKey, seasons] of Object.entries(snapshot.standings || {})) {
@@ -64,8 +59,17 @@ function buildTeamSlice(snapshot, teamId) {
       if (!phases.has(entry.name)) continue;
       if (!standings[leagueKey]) standings[leagueKey] = {};
       standings[leagueKey][year] = entry;
+      // The table lists every club in the league, not just this team's
+      // opponents, and the widget resolves each row's abbrev through the team
+      // index — so those names have to travel with the slice as well.
+      for (const row of (entry.rows || [])) nameIds.add(row.team_id);
     }
   }
+
+  // Names for everything the widget renders: opponents and table rows
+  const teams = (snapshot.teams || [])
+    .filter(t => nameIds.has(t.id))
+    .map(t => ({ id: t.id, abbrev: t.abbrev, name: t.name }));
 
   const self = teams.find(t => t.id === teamId) || { id: teamId, abbrev: String(teamId), name: String(teamId) };
   return { team: self, teams, gamedays, standings };
