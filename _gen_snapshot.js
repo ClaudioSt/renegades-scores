@@ -3,6 +3,7 @@
 // Rebuild:     node _gen_snapshot.js --rebuild  (re-index teams + re-fetch game logs for current season)
 // Live update: node _gen_snapshot.js --today              (refetch only today's gamedays; no-op outside 6-20 Berlin time)
 //              node _gen_snapshot.js --today --days=N     (manual: refetch gamedays from the last N days, ignores time window)
+// Recompute:   node _gen_snapshot.js --recompute (offline: re-tag phases + recompute standings from the existing snapshot)
 
 const API_BASE       = 'https://leaguesphere.app/api';
 const BATCH_SIZE     = 5;
@@ -29,8 +30,26 @@ const PLACEHOLDER_RE = /^(Gewinner|Verlierer|[A-Z]\d{1,2}$|[PGQ]\d+\s*(Gruppe|HF
 const EVENT_NAME_RE  = /^\d+\.?\s*(Spieltag|Spielrunde)|Spieltag\s*\d+|Turnier|Cup\b|Finale|Pokal|Meisterschaft|Halbfinale|Viertelfinale|Relegation|Aufstieg|Abstieg/i;
 function looksLikeTeamName(name) { return !!name && !EVENT_NAME_RE.test(name); }
 
-const { loadLeagueConfig } = require('./league-config.js');
+const { loadLeagueConfig, selectSeasonGamedays } = require('./league-config.js');
 const { computeStandings } = require('./standings.js');
+
+// Annotate each gameday that belongs to a configured league season with its
+// phase name. Uses the same derivation as computeStandings, so table and phase
+// tags can never drift apart. Clears stale tags first so re-runs over an
+// existing snapshot (--rebuild, --recompute) stay idempotent.
+function tagPhases(leagueConfig, gamedays) {
+  for (const gd of gamedays) delete gd.phase;
+  let tagged = 0;
+  for (const seasons of Object.values(leagueConfig)) {
+    for (const [season, cfg] of Object.entries(seasons)) {
+      for (const gd of selectSeasonGamedays(cfg, season, gamedays)) {
+        gd.phase = cfg.name;
+        tagged++;
+      }
+    }
+  }
+  return tagged;
+}
 
 async function fetchJSON(url, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -199,6 +218,18 @@ function buildTeams(withGames, teamNameMap) {
   const leagueConfig = loadLeagueConfig('./league-config.json');
   console.log('League config loaded: ' + Object.keys(leagueConfig).join(', '));
 
+  if (process.argv.includes('--recompute')) {
+    // No network: phases and standings are pure functions of the snapshot data
+    // we already have, so a league-config change can be applied without a refetch.
+    const existing = JSON.parse(require('fs').readFileSync('snapshot.json', 'utf8'));
+    console.log(tagPhases(leagueConfig, existing.gamedays) + ' gamedays tagged with phase names');
+    const standings = computeStandings(leagueConfig, existing.gamedays);
+    const snapshot  = Object.assign({}, existing, { standings });
+    require('fs').writeFileSync('snapshot.json', JSON.stringify(snapshot), 'utf8');
+    console.log('Written snapshot.json (recompute only)');
+    return;
+  }
+
   if (process.argv.includes('--today')) {
     const daysArg = process.argv.find(a => a.startsWith('--days='));
     const days    = daysArg ? Number(daysArg.slice('--days='.length)) : 1;
@@ -247,6 +278,7 @@ function buildTeams(withGames, teamNameMap) {
     }
     console.log('  ' + logGot + ' game log(s) fetched');
 
+    tagPhases(leagueConfig, existing.gamedays);
     const standings = computeStandings(leagueConfig, existing.gamedays);
     const snapshot  = Object.assign({}, existing, { standings });
     const json      = JSON.stringify(snapshot);
@@ -334,20 +366,7 @@ function buildTeams(withGames, teamNameMap) {
   }
 
   // Phase-tagging pass: annotate each gameday with its league-config phase name
-  const gamedayPhaseMap = {};
-  for (const [, seasons] of Object.entries(leagueConfig)) {
-    for (const [, cfg] of Object.entries(seasons)) {
-      for (const gdId of cfg.gameday_ids) {
-        gamedayPhaseMap[gdId] = cfg.name;
-      }
-    }
-  }
-  let tagged = 0;
-  for (const gd of withGames) {
-    const phase = gamedayPhaseMap[gd.id];
-    if (phase) { gd.phase = phase; tagged++; }
-  }
-  console.log('  ' + tagged + ' gamedays tagged with phase names');
+  console.log('  ' + tagPhases(leagueConfig, withGames) + ' gamedays tagged with phase names');
 
   console.log('Fetching team names…');
   const teamNameMap = await fetchTeamNameMap();
