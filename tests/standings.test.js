@@ -29,7 +29,8 @@ describe('computeStandings: win/loss', () => {
     'test-league': {
       '2026': {
         name: 'Test League 2026',
-        gameday_ids: [1],
+        league_display: 'Test',
+        exclude_gameday_ids: [],
         promotion_restricted: [],
       },
     },
@@ -116,7 +117,8 @@ describe('computeStandings: draw', () => {
     'test-league': {
       '2026': {
         name: 'Test League 2026',
-        gameday_ids: [1],
+        league_display: 'Test',
+        exclude_gameday_ids: [],
         promotion_restricted: [],
       },
     },
@@ -169,7 +171,8 @@ describe('computeStandings: null final_score skipped', () => {
     'test-league': {
       '2026': {
         name: 'Test League 2026',
-        gameday_ids: [1],
+        league_display: 'Test',
+        exclude_gameday_ids: [],
         promotion_restricted: [],
       },
     },
@@ -187,14 +190,15 @@ describe('computeStandings: null final_score skipped', () => {
   });
 });
 
-// ─── computeStandings — gameday not in gameday_ids is skipped ────────────────
+// ─── computeStandings — gameday of another league is skipped ─────────────────
 
-describe('computeStandings: gameday not in gameday_ids', () => {
+describe('computeStandings: gameday of another league', () => {
   const leagueConfig = {
     'test-league': {
       '2026': {
         name: 'Test League 2026',
-        gameday_ids: [99],  // gameday id=1 is NOT listed
+        league_display: 'Other League',  // gameday is league_display 'Test'
+        exclude_gameday_ids: [],
         promotion_restricted: [],
       },
     },
@@ -204,10 +208,73 @@ describe('computeStandings: gameday not in gameday_ids', () => {
   const teamB = { id: 2, name: 'Team B', pa: 14 };
   const gamedays = [makeGameday(1, [makeGame(10, teamA, teamB)])];
 
-  it('returns empty rows when gameday id not in gameday_ids', () => {
+  it('returns empty rows when league_display does not match', () => {
     const result = computeStandings(leagueConfig, gamedays);
     const rows = result['test-league']['2026'].rows;
     assert.deepEqual(rows, []);
+  });
+});
+
+// ─── computeStandings — gameday of another season is skipped ─────────────────
+
+describe('computeStandings: gameday of another season', () => {
+  const leagueConfig = {
+    'test-league': {
+      '2026': {
+        name: 'Test League 2026',
+        league_display: 'Test',
+        exclude_gameday_ids: [],
+        promotion_restricted: [],
+      },
+    },
+  };
+
+  const teamA = { id: 1, name: 'Team A', pa: 7 };
+  const teamB = { id: 2, name: 'Team B', pa: 14 };
+  const gamedays = [
+    Object.assign(makeGameday(1, [makeGame(10, teamA, teamB)]), { date: '2025-08-01' }),
+  ];
+
+  it('returns empty rows when the gameday year is not the season year', () => {
+    const result = computeStandings(leagueConfig, gamedays);
+    const rows = result['test-league']['2026'].rows;
+    assert.deepEqual(rows, []);
+  });
+});
+
+// ─── computeStandings — new gameday counts without a config change ───────────
+
+describe('computeStandings: newly appearing gameday', () => {
+  const leagueConfig = {
+    'test-league': {
+      '2026': {
+        name: 'Test League 2026',
+        league_display: 'Test',
+        exclude_gameday_ids: [],
+        promotion_restricted: [],
+      },
+    },
+  };
+
+  const teamA = { id: 1, name: 'Team A', pa: 7 };
+  const teamB = { id: 2, name: 'Team B', pa: 14 };
+
+  it('picks up a gameday that no config field mentions', () => {
+    // id 4711 appears nowhere in the config — it must still count
+    const gamedays = [makeGameday(4711, [makeGame(10, teamA, teamB)])];
+    const rows = computeStandings(leagueConfig, gamedays)['test-league']['2026'].rows;
+    assert.equal(rows.length, 2);
+    assert.equal(rows.find(r => r.team_id === 1).Sp, 1);
+  });
+
+  it('adds a second gameday cumulatively', () => {
+    const gamedays = [
+      makeGameday(4711, [makeGame(10, teamA, teamB)]),
+      makeGameday(4712, [makeGame(11, teamA, teamB)]),
+    ];
+    const rows = computeStandings(leagueConfig, gamedays)['test-league']['2026'].rows;
+    assert.equal(rows.find(r => r.team_id === 1).Sp, 2);
+    assert.equal(rows.find(r => r.team_id === 1).S,  2);
   });
 });
 
@@ -220,31 +287,48 @@ describe('computeStandings: empty leagueConfig', () => {
   });
 });
 
-// ─── computeStandings — empty gameday_ids → rows: [] ─────────────────────────
+// ─── computeStandings — exclude_gameday_ids ──────────────────────────────────
 
-describe('computeStandings: empty gameday_ids', () => {
-  const leagueConfig = {
-    'test-league': {
-      '2026': {
-        name: 'Test League 2026',
-        gameday_ids: [],
-        promotion_restricted: [10, 20],
-      },
-    },
-  };
-
+describe('computeStandings: exclude_gameday_ids', () => {
   const teamA = { id: 1, name: 'Team A', pa: 7 };
   const teamB = { id: 2, name: 'Team B', pa: 14 };
-  const gamedays = [makeGameday(1, [makeGame(10, teamA, teamB)])];
+  const gamedays = [
+    makeGameday(1, [makeGame(10, teamA, teamB)]),
+    makeGameday(2, [makeGame(11, teamA, teamB)]),  // "playoff" day
+  ];
 
-  it('returns rows: [] when gameday_ids is empty', () => {
-    const result = computeStandings(leagueConfig, gamedays);
-    const rows = result['test-league']['2026'].rows;
+  function config(exclude, restricted = []) {
+    return {
+      'test-league': {
+        '2026': {
+          name: 'Test League 2026',
+          league_display: 'Test',
+          exclude_gameday_ids: exclude,
+          promotion_restricted: restricted,
+        },
+      },
+    };
+  }
+
+  it('drops an excluded gameday from the table', () => {
+    const rows = computeStandings(config([2]), gamedays)['test-league']['2026'].rows;
+    assert.equal(rows.find(r => r.team_id === 1).Sp, 1, 'only gameday 1 must count');
+  });
+
+  it('excluding every gameday returns rows: []', () => {
+    const rows = computeStandings(config([1, 2]), gamedays)['test-league']['2026'].rows;
     assert.deepEqual(rows, []);
   });
 
+  it('treats a missing exclude_gameday_ids field as no exclusions', () => {
+    const cfg = config([]);
+    delete cfg['test-league']['2026'].exclude_gameday_ids;
+    const rows = computeStandings(cfg, gamedays)['test-league']['2026'].rows;
+    assert.equal(rows.find(r => r.team_id === 1).Sp, 2);
+  });
+
   it('passes through promotion_restricted unchanged', () => {
-    const result = computeStandings(leagueConfig, gamedays);
+    const result = computeStandings(config([1, 2], [10, 20]), gamedays);
     assert.deepEqual(result['test-league']['2026'].promotion_restricted, [10, 20]);
   });
 });
@@ -256,7 +340,8 @@ describe('computeStandings: SQ precision', () => {
     'test-league': {
       '2026': {
         name: 'Test League 2026',
-        gameday_ids: [1, 2, 3],
+        league_display: 'Test',
+        exclude_gameday_ids: [],
         promotion_restricted: [],
       },
     },
@@ -300,7 +385,8 @@ describe('computeStandings: row sorting', () => {
     'test-league': {
       '2026': {
         name: 'Test League 2026',
-        gameday_ids: [1, 2, 3],
+        league_display: 'Test',
+        exclude_gameday_ids: [],
         promotion_restricted: [],
       },
     },

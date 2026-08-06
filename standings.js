@@ -1,7 +1,13 @@
 'use strict';
 
+const { selectSeasonGamedays } = require('./league-config.js');
+
 /**
  * computeStandings(leagueConfig, gamedays)
+ *
+ * Gamedays are derived from the snapshot per league season (league_display +
+ * season year), so a newly published gameday counts towards the table on the
+ * next snapshot run without any config change.
  *
  * @param {object} leagueConfig - validated league config (from loadLeagueConfig)
  * @param {Array}  gamedays     - array of gameday objects (from snapshot.json)
@@ -15,14 +21,12 @@ function computeStandings(leagueConfig, gamedays) {
 
     for (const season of Object.keys(leagueConfig[leagueKey])) {
       const cfg = leagueConfig[leagueKey][season];
-      const gamedayIdSet = new Set(cfg.gameday_ids);
+      const seasonGamedays = selectSeasonGamedays(cfg, season, gamedays);
 
       // teamStats: Map<team_id, { team_name, Sp, S, U, N, EP, GP }>
       const teamStats = new Map();
 
-      for (const gd of gamedays) {
-        if (!gamedayIdSet.has(gd.id)) continue;
-
+      for (const gd of seasonGamedays) {
         for (const game of (gd.games || [])) {
           if (game.final_score == null) continue;
 
