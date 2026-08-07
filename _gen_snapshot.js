@@ -32,6 +32,18 @@ function looksLikeTeamName(name) { return !!name && !EVENT_NAME_RE.test(name); }
 
 const { loadLeagueConfig, selectSeasonGamedays } = require('./league-config.js');
 const { computeStandings } = require('./standings.js');
+const { writeSlices }      = require('./slices.js');
+
+const API_DIR = 'api';
+
+// Cut the freshly written snapshot into the per-team / per-league API slices.
+// Runs after every mode, so slices can never lag behind snapshot.json.
+function emitSlices(snapshot) {
+  const s = writeSlices(snapshot, API_DIR);
+  console.log('Slices: ' + s.written + ' written, ' + s.unchanged + ' unchanged, '
+    + s.removed + ' removed (' + s.teams + ' teams, '
+    + (s.bytes / 1024 / 1024).toFixed(1) + ' MB total)');
+}
 
 // Annotate each gameday that belongs to a configured league season with its
 // phase name. Uses the same derivation as computeStandings, so table and phase
@@ -227,6 +239,7 @@ function buildTeams(withGames, teamNameMap) {
     const snapshot  = Object.assign({}, existing, { standings });
     require('fs').writeFileSync('snapshot.json', JSON.stringify(snapshot), 'utf8');
     console.log('Written snapshot.json (recompute only)');
+    emitSlices(snapshot);
     return;
   }
 
@@ -284,6 +297,7 @@ function buildTeams(withGames, teamNameMap) {
     const json      = JSON.stringify(snapshot);
     require('fs').writeFileSync('snapshot.json', json, 'utf8');
     console.log('Written snapshot.json (today-only update)');
+    emitSlices(snapshot);
     return;
   }
 
@@ -391,4 +405,5 @@ function buildTeams(withGames, teamNameMap) {
   require('fs').writeFileSync('snapshot.json', json, 'utf8');
   const kb = (Buffer.byteLength(json, 'utf8') / 1024).toFixed(1);
   console.log('Written snapshot.json (' + kb + ' KB)');
+  emitSlices(snapshot);
 })().catch(e => { console.error(e); process.exit(1); });

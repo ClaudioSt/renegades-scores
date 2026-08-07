@@ -15,6 +15,7 @@ pre-fetched daily into `snapshot.json` to avoid CORS and performance issues.
 | `_gen_snapshot.js` | Node.js script that builds snapshot.json — run locally or via GitHub Actions |
 | `league-config.json` | Which leagues/seasons get a standings table (`league_display` + season year) |
 | `standings.js` | Computes the tables from the snapshot; result stored as `snapshot.standings` |
+| `slices.js` | Cuts the snapshot into small per-team / per-league API files under `api/v1/` |
 | `.github/workflows/update-snapshot.yml` | Daily full refresh at 3 AM UTC (5 AM CEST) |
 | `.github/workflows/update-snapshot-live.yml` | Every 5 min, refetches only today's gamedays (6-20 Uhr Berlin time, gated in-script) |
 
@@ -61,6 +62,43 @@ stored as `game.log = { l, r, ev[] }` in snapshot. Never fetch from client.
 
 `pa` = **points against** (what the opponent scored). Win = `me.pa < other.pa`.
 
+## API slices (`api/v1/`)
+
+`slices.js` cuts the snapshot into per-request files, written by every generator mode.
+A team page needs ~40 KB instead of the full 3.8 MB snapshot.
+
+```
+api/v1/teams.json                    id/name index for generator.html      (~24 KB)
+api/v1/teams/<id>.json               that team's gamedays, games, tables   (~24 KB avg)
+api/v1/standings/<league>/<year>.json one table                            (~2 KB)
+api/v1/health.json                   { generated, teams, gamedays, standings[] }
+```
+
+A team slice holds **only that team's own games** — `renderGamedayCard()` filters to them
+anyway — plus the opponents' names and the tables of the leagues the team appears in.
+
+Two rules keep git history from exploding, both covered by tests:
+- **No timestamp in team/standings slices.** Data age lives in `health.json` alone, so a
+  slice stays byte-identical when nothing changed.
+- **`writeIfChanged()`**: files are only rewritten when their content differs. A rerun over
+  unchanged data writes zero files.
+
+Teams that appear only in the passcheck list (no games) get no slice; slices of teams that
+vanish from the data are deleted. Both workflows stage `api/` alongside `snapshot.json`.
+
+A slice carries names for **opponents and every club in its tables** — the standings list
+clubs the team never played, and `renderStandingsTable()` resolves each row's abbrev through
+the team index. Dropping those turns table rows into raw abbrevs (`Regen3` instead of
+`Regensburg Phoenix III`).
+
+The widget assembles a snapshot-shaped object from the slices (`mergeTeamSlices()`), so every
+renderer stays unchanged. `tests/slice-equivalence.test.js` asserts both paths produce
+byte-identical HTML — when adding a renderer that reads a new snapshot field, extend
+`buildTeamSlice()` too or that test will fail. Note it must prime `_teamNameByAbbrev` the way
+`loadSnapshot()` does, otherwise name regressions stay invisible.
+
+On failure the widget falls back to `snapshot.json`, so a broken API never blanks the embed.
+
 ## Standings tables (`league-config.json`)
 
 A league only gets a table if it is listed here. Spieltage are **derived** from the
@@ -98,6 +136,7 @@ so `name` must stay stable while a season is running.
 | `show_future` | `1` | `0` hides future section entirely |
 | `title` | `1` | `0` hides team title |
 | `compact` | `0` | `1` enables compact layout |
+| `api` | `api/v1/` | Slice base URL; `0` forces the full `snapshot.json` |
 
 Example: `widget.html?t=159&color=ffab00&past=5&compact=1`
 

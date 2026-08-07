@@ -319,9 +319,13 @@ function parseConfigFromSearch(search) {
   var showTitle   = params.get('title')       !== '0';
   var compact     = params.get('compact')     === '1';
   var view        = params.get('view') || 'spielplan';
+  // api=0 forces the full snapshot.json; api=<url> points at another host
+  // (the planned VPS); default reads the slices next to the widget.
+  var apiParam    = params.get('api');
+  var api         = apiParam === '0' ? null : (apiParam || 'api/v1/');
   return { teams: teams, color: color, refresh: refresh, past: past, future: future,
            showPast: showPast, showFuture: showFuture, showTitle: showTitle, compact: compact,
-           view: view };
+           view: view, api: api };
 }
 function parseConfig() { return parseConfigFromSearch(window.location.search); }
 
@@ -426,15 +430,106 @@ async function fetchJSON(url) {
 }
 
 // ── SNAPSHOT ─────────────────────────────────────────────────────────────────
+// Everything below renders from a snapshot-shaped object { teams, gamedays,
+// standings }. That object is either the full snapshot.json (legacy path, ~3.8 MB)
+// or assembled from the small per-team API slices (~40 KB for both Renegades
+// teams). Assembling rather than reshaping keeps every renderer unchanged.
+
+// A 404 means "team has no games" — the same empty result the full snapshot
+// would produce — so it must not trigger the fallback.
+function fetchSliceOrNull(url) {
+  return fetch(url).then(function(res) {
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' - ' + url);
+    return res.json();
+  });
+}
+
+// Merges per-team slices back into one snapshot-shaped object. Two teams can
+// share a gameday (e.g. both Renegades squads at the same venue), in which case
+// their games must end up in the same gameday entry, deduped by game id.
+function mergeTeamSlices(slices) {
+  var teams = [], teamSeen = {}, gamedays = [], gdIndex = {}, standings = {};
+
+  (slices || []).forEach(function(slice) {
+    if (!slice) return;
+
+    (slice.teams || []).forEach(function(t) {
+      if (teamSeen[t.id]) return;
+      teamSeen[t.id] = true;
+      teams.push(t);
+    });
+
+    (slice.gamedays || []).forEach(function(gd) {
+      var existing = gdIndex[gd.id];
+      if (!existing) {
+        var copy = {};
+        for (var k in gd) {
+          if (Object.prototype.hasOwnProperty.call(gd, k)) copy[k] = gd[k];
+        }
+        copy.games = (gd.games || []).slice();
+        gdIndex[gd.id] = copy;
+        gamedays.push(copy);      // array, not object keys — preserves snapshot order
+        return;
+      }
+      var seen = {};
+      existing.games.forEach(function(g) { seen[g.id] = true; });
+      (gd.games || []).forEach(function(g) {
+        if (!seen[g.id]) { seen[g.id] = true; existing.games.push(g); }
+      });
+      if (!existing.phase && gd.phase) existing.phase = gd.phase;
+    });
+
+    Object.keys(slice.standings || {}).forEach(function(league) {
+      if (!standings[league]) standings[league] = {};
+      Object.keys(slice.standings[league]).forEach(function(year) {
+        if (!standings[league][year]) standings[league][year] = slice.standings[league][year];
+      });
+    });
+  });
+
+  return { teams: teams, gamedays: gamedays, standings: standings };
+}
+
+function resolveApiBase(apiBase, pageBase) {
+  var root = /^https?:\/\//.test(apiBase) ? apiBase : pageBase + apiBase;
+  return root.slice(-1) === '/' ? root : root + '/';
+}
+
+// Query and hash must go before cutting the filename — a parameter value may
+// itself contain slashes (api=http://host/v1/), which would otherwise leave the
+// query string inside the base URL and resolve every fetch against widget.html.
+function pageBaseFrom(href) {
+  return String(href).split('#')[0].split('?')[0].replace(/[^/]*$/, '');
+}
+
 var _snapshotPromise = null;
-async function loadSnapshot() {
-  if (!_snapshotPromise) {
-    var base = window.location.href.replace(/[^/]*$/, '');
-    _snapshotPromise = fetchJSON(base + 'snapshot.json').then(function(snap) {
-      snap.teams.forEach(function(t) { _teamNameByAbbrev[t.abbrev] = t.name; });
-      return snap;
+async function loadSnapshot(teamIds, apiBase) {
+  if (_snapshotPromise) return _snapshotPromise;
+  var pageBase = pageBaseFrom(window.location.href);
+
+  function loadFull() { return fetchJSON(pageBase + 'snapshot.json'); }
+
+  var load;
+  if (!apiBase || !teamIds || !teamIds.length) {
+    load = loadFull();
+  } else {
+    var root = resolveApiBase(apiBase, pageBase);
+    load = Promise.all(teamIds.map(function(id) {
+      return fetchSliceOrNull(root + 'teams/' + id + '.json');
+    })).then(mergeTeamSlices).catch(function(e) {
+      // API unreachable — fall back so the widget keeps working
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('Slice-API nicht erreichbar, nutze snapshot.json:', e);
+      }
+      return loadFull();
     });
   }
+
+  _snapshotPromise = load.then(function(snap) {
+    (snap.teams || []).forEach(function(t) { _teamNameByAbbrev[t.abbrev] = t.name; });
+    return snap;
+  });
   return _snapshotPromise;
 }
 
@@ -626,7 +721,7 @@ var DataStore = (function() {
   }
 
   async function init(cfg) {
-    _snap = await loadSnapshot();
+    _snap = await loadSnapshot(cfg.teams, cfg.api);
     var today = new Date().toISOString().slice(0, 10);
     _watchedIds = new Set();
     _snap.gamedays.forEach(function(gd) {
