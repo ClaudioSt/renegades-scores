@@ -52,6 +52,12 @@
       border-radius: 6px; padding: 10px 14px; font-size: 1rem; width: 100%; outline: none;
     }
     input[type=number]:focus { border-color: #555; }
+    select {
+      background: #1a1a1a; border: 1px solid #333; color: #f0f0f0;
+      border-radius: 6px; padding: 10px 14px; font-size: 1rem; width: 100%; outline: none;
+      cursor: pointer; appearance: none; -webkit-appearance: none;
+    }
+    select:focus { border-color: #555; }
     .row-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 20px; margin-top: 4px; }
     .checkbox-row {
@@ -116,12 +122,26 @@
     <label class="checkbox-row"><input type="checkbox" id="compact-mode"> Kompakter Modus</label>
   </div>
 
+  <label>Ansicht</label>
+  <select id="view-input">
+    <option value="spielplan">Spielplan (Standard)</option>
+    <option value="table">Tabelle</option>
+  </select>
+
   <div style="margin-top:24px">
     <button id="generate-btn" type="button">Embed-Code generieren</button>
   </div>
 
   <div id="output-section">
-    <h2>Embed-Code</h2>
+    <h2>Schritt 1 — Einmalig auf der Seite einfügen</h2>
+    <p style="font-size:0.8rem;color:#888;margin-bottom:8px;">Dieses Script nur einmal pro Seite einfügen (passt die Höhe automatisch an).</p>
+    <textarea id="listener-output" readonly rows="4"></textarea>
+    <div class="copy-row">
+      <button class="secondary" id="copy-listener-btn" type="button">Kopieren</button>
+      <span class="copy-confirm" id="copy-listener-confirm">Kopiert!</span>
+    </div>
+
+    <h2 style="margin-top:24px;">Schritt 2 — Widget einbetten</h2>
     <textarea id="embed-output" readonly></textarea>
     <div class="copy-row">
       <button class="secondary" id="copy-btn" type="button">Kopieren</button>
@@ -134,7 +154,7 @@
 
   <div id="preview-frame-wrap">
     <h2>Vorschau</h2>
-    <iframe id="preview-frame" frameborder="0"></iframe>
+    <iframe id="preview-frame" frameborder="0" allowtransparency="true"></iframe>
   </div>
 </div>
 
@@ -332,6 +352,7 @@ document.getElementById('generate-btn').addEventListener('click', function() {
   var showFuture  = document.getElementById('show-future').checked;
   var showTitle   = document.getElementById('show-title').checked;
   var compact     = document.getElementById('compact-mode').checked;
+  var view        = document.getElementById('view-input').value;
 
   var base   = window.location.href.replace('generator.html', 'widget.html');
   var params = teams.map(function(t) { return 't=' + t; }).join('&') + '&color=' + color;
@@ -341,16 +362,45 @@ document.getElementById('generate-btn').addEventListener('click', function() {
   if (!showFuture)       params += '&show_future=0';
   if (!showTitle)        params += '&title=0';
   if (compact)           params += '&compact=1';
+  if (view !== 'spielplan') params += '&view=' + view;
   var src    = base + '?' + params;
 
-  var embedCode = '<iframe\n  src="' + src + '"\n  width="100%"\n  height="800"\n  frameborder="0"\n  style="border:none;"\n></iframe>';
+  var listenerCode = '<script>'
+    + '\nwindow.addEventListener(\'message\',function(e){'
+    + 'if(e.origin!==\'https://claudiost.github.io\')return;'
+    + 'if(e.data&&e.data.type===\'iframeHeight\'){'
+    + 'var fs=document.getElementsByTagName(\'iframe\');'
+    + 'for(var i=0;i<fs.length;i++){'
+    + 'try{if(fs[i].contentWindow===e.source){'
+    + 'fs[i].style.height=e.data.height+\'px\';break;}}'
+    + 'catch(ex){}}}});</s' + 'cript>';
 
+  var embedCode = '<iframe'
+    + '\n  src="'       + src + '"'
+    + '\n  width="100%"'
+    + '\n  height="400"'
+    + '\n  frameborder="0"'
+    + '\n  allowtransparency="true"'
+    + '\n  style="border:none;overflow:hidden"'
+    + '\n></iframe>';
+
+  document.getElementById('listener-output').value = listenerCode;
   document.getElementById('embed-output').value = embedCode;
   document.getElementById('preview-link').href  = src;
   document.getElementById('output-section').style.display = 'block';
   // Generator UI is dark, so force the preview to match.
   document.getElementById('preview-frame').src              = src + '&theme=dark';
   document.getElementById('preview-frame-wrap').style.display = 'block';
+});
+
+document.getElementById('copy-listener-btn').addEventListener('click', function() {
+  navigator.clipboard.writeText(document.getElementById('listener-output').value).catch(function() {
+    document.getElementById('listener-output').select();
+    document.execCommand('copy');
+  });
+  var confirm = document.getElementById('copy-listener-confirm');
+  confirm.classList.add('show');
+  setTimeout(function() { confirm.classList.remove('show'); }, 2000);
 });
 
 document.getElementById('copy-btn').addEventListener('click', function() {

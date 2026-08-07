@@ -1,6 +1,9 @@
 // Fetches all gameday metadata + games and writes snapshot.json
 // Full run:    node _gen_snapshot.js           (~5 min for 734 gamedays, batch 5 + 100ms delay)
 // Rebuild:     node _gen_snapshot.js --rebuild  (re-index teams + re-fetch game logs for current season)
+// Live update: node _gen_snapshot.js --today              (refetch only today's gamedays; no-op outside 6-20 Berlin time)
+//              node _gen_snapshot.js --today --days=N     (manual: refetch gamedays from the last N days, ignores time window)
+// Recompute:   node _gen_snapshot.js --recompute (offline: re-tag phases + recompute standings from the existing snapshot)
 
 const API_BASE       = 'https://leaguesphere.app/api';
 const BATCH_SIZE     = 5;
@@ -26,6 +29,27 @@ const PLACEHOLDER_RE = /^(Gewinner|Verlierer|[A-Z]\d{1,2}$|[PGQ]\d+\s*(Gruppe|HF
 // Gameday names that look like event/round names rather than club names
 const EVENT_NAME_RE  = /^\d+\.?\s*(Spieltag|Spielrunde)|Spieltag\s*\d+|Turnier|Cup\b|Finale|Pokal|Meisterschaft|Halbfinale|Viertelfinale|Relegation|Aufstieg|Abstieg/i;
 function looksLikeTeamName(name) { return !!name && !EVENT_NAME_RE.test(name); }
+
+const { loadLeagueConfig, selectSeasonGamedays } = require('./league-config.js');
+const { computeStandings } = require('./standings.js');
+
+// Annotate each gameday that belongs to a configured league season with its
+// phase name. Uses the same derivation as computeStandings, so table and phase
+// tags can never drift apart. Clears stale tags first so re-runs over an
+// existing snapshot (--rebuild, --recompute) stay idempotent.
+function tagPhases(leagueConfig, gamedays) {
+  for (const gd of gamedays) delete gd.phase;
+  let tagged = 0;
+  for (const seasons of Object.values(leagueConfig)) {
+    for (const [season, cfg] of Object.entries(seasons)) {
+      for (const gd of selectSeasonGamedays(cfg, season, gamedays)) {
+        gd.phase = cfg.name;
+        tagged++;
+      }
+    }
+  }
+  return tagged;
+}
 
 async function fetchJSON(url, retries = 3) {
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -191,6 +215,78 @@ function buildTeams(withGames, teamNameMap) {
 }
 
 (async () => {
+  const leagueConfig = loadLeagueConfig('./league-config.json');
+  console.log('League config loaded: ' + Object.keys(leagueConfig).join(', '));
+
+  if (process.argv.includes('--recompute')) {
+    // No network: phases and standings are pure functions of the snapshot data
+    // we already have, so a league-config change can be applied without a refetch.
+    const existing = JSON.parse(require('fs').readFileSync('snapshot.json', 'utf8'));
+    console.log(tagPhases(leagueConfig, existing.gamedays) + ' gamedays tagged with phase names');
+    const standings = computeStandings(leagueConfig, existing.gamedays);
+    const snapshot  = Object.assign({}, existing, { standings });
+    require('fs').writeFileSync('snapshot.json', JSON.stringify(snapshot), 'utf8');
+    console.log('Written snapshot.json (recompute only)');
+    return;
+  }
+
+  if (process.argv.includes('--today')) {
+    const daysArg = process.argv.find(a => a.startsWith('--days='));
+    const days    = daysArg ? Number(daysArg.slice('--days='.length)) : 1;
+
+    if (days === 1) {
+      const berlinHour = Number(new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Europe/Berlin', hour: '2-digit', hour12: false,
+      }).format(new Date()));
+      if (berlinHour < 6 || berlinHour >= 20) {
+        console.log('Outside 6-20 Berlin time window (hour: ' + berlinHour + ') — skipping.');
+        return;
+      }
+    }
+
+    const berlinDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Berlin' }).format(new Date());
+    const startDate  = new Date(berlinDate + 'T00:00:00Z');
+    startDate.setUTCDate(startDate.getUTCDate() - (days - 1));
+    const sinceDate  = startDate.toISOString().slice(0, 10);
+
+    const existing  = JSON.parse(require('fs').readFileSync('snapshot.json', 'utf8'));
+    const todaysGds = existing.gamedays.filter(gd => gd.date >= sinceDate && gd.date <= berlinDate);
+    if (!todaysGds.length) {
+      console.log('No gamedays in range ' + sinceDate + '..' + berlinDate + ' — skipping.');
+      return;
+    }
+
+    console.log(todaysGds.length + ' gameday(s) in range ' + sinceDate + '..' + berlinDate + ' — refreshing games…');
+    for (const gd of todaysGds) {
+      try {
+        const games = await fetchJSON(API_BASE + '/gamedays/' + gd.id + '/games/?format=json');
+        gd.games = games.map(slimGame);
+      } catch (e) {}
+    }
+
+    let logGot = 0;
+    for (const gd of todaysGds) {
+      for (const game of gd.games) {
+        if (game.id && !game.log && game.status === 'beendet') {
+          try {
+            const html = await fetchHTML('https://leaguesphere.app/gamedays/gameday/' + gd.id + '/game/' + game.id);
+            const log  = parseGameLog(html);
+            if (log) { game.log = log; logGot++; }
+          } catch (e) {}
+        }
+      }
+    }
+    console.log('  ' + logGot + ' game log(s) fetched');
+
+    tagPhases(leagueConfig, existing.gamedays);
+    const standings = computeStandings(leagueConfig, existing.gamedays);
+    const snapshot  = Object.assign({}, existing, { standings });
+    const json      = JSON.stringify(snapshot);
+    require('fs').writeFileSync('snapshot.json', json, 'utf8');
+    console.log('Written snapshot.json (today-only update)');
+    return;
+  }
+
   const rebuild = process.argv.includes('--rebuild');
   let withGames;
 
@@ -253,7 +349,7 @@ function buildTeams(withGames, teamNameMap) {
     let logDone = 0, logGot = 0;
     for (const gd of logGds) {
       for (const game of gd.games) {
-        if (game.id && !game.log) {
+        if (game.id && !game.log && game.status === 'beendet') {
           try {
             const html = await fetchHTML('https://leaguesphere.app/gamedays/gameday/' + gd.id + '/game/' + game.id);
             const log  = parseGameLog(html);
@@ -268,6 +364,9 @@ function buildTeams(withGames, teamNameMap) {
     process.stdout.write('\n');
     console.log('  ' + logGot + ' game logs stored');
   }
+
+  // Phase-tagging pass: annotate each gameday with its league-config phase name
+  console.log('  ' + tagPhases(leagueConfig, withGames) + ' gamedays tagged with phase names');
 
   console.log('Fetching team names…');
   const teamNameMap = await fetchTeamNameMap();
@@ -284,7 +383,10 @@ function buildTeams(withGames, teamNameMap) {
   const allTeams = teams.concat(extraTeams).sort((a, b) => a.name.localeCompare(b.name, 'de'));
   console.log('  ' + allTeams.length + ' teams indexed (' + extraTeams.length + ' from passcheck only)');
 
-  const snapshot = { generated: TODAY, teams: allTeams, gamedays: withGames };
+  const standings = computeStandings(leagueConfig, withGames);
+  console.log('Standings computed for ' + Object.keys(standings).length + ' league(s)');
+
+  const snapshot = { generated: TODAY, teams: allTeams, gamedays: withGames, standings };
   const json     = JSON.stringify(snapshot);
   require('fs').writeFileSync('snapshot.json', json, 'utf8');
   const kb = (Buffer.byteLength(json, 'utf8') / 1024).toFixed(1);

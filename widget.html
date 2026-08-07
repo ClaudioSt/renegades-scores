@@ -62,6 +62,11 @@
       --draw: #a35c00;
       --live-bg: #c62828;
       --live-fg: #ffffff;
+      --on-accent: #ffffff;
+      --accent-alt: #2f57c7;
+      --warn-bg: #fff4e5;
+      --warn-line: #f0d2a8;
+      --warn-ink: #8a5000;
       --error-bg: #fdecea;
       --error-line: #f0bcb8;
       --error-ink: #a52019;
@@ -85,6 +90,11 @@
       --draw: #ff9800;
       --live-bg: #d32f2f;
       --live-fg: #ffffff;
+      --on-accent: #16181d;
+      --accent-alt: #6495ed;
+      --warn-bg: #2a1a10;
+      --warn-line: #5a3010;
+      --warn-ink: #ff9800;
       --error-bg: #2a1010;
       --error-line: #5a2020;
       --error-ink: #ef5350;
@@ -105,14 +115,11 @@
       text-transform: uppercase; letter-spacing: 2px;
       margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--accent);
     }
+    .team-title:empty { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
     .section-title {
       font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
       letter-spacing: 3px; color: var(--ink-2); margin: 24px 0 12px 0;
     }
-    .progress-wrap { margin: 12px 0; }
-    .progress-bar-bg { background: var(--surface-2); border-radius: 4px; height: 6px; overflow: hidden; }
-    .progress-bar-fg { background: var(--accent); height: 6px; border-radius: 4px; transition: width 0.2s ease; }
-    .progress-label { font-size: 0.75rem; color: var(--ink-2); margin-top: 6px; }
     .live-banner {
       background: var(--live-bg); color: var(--live-fg); border-radius: 8px;
       padding: 16px 20px; margin-bottom: 12px;
@@ -156,8 +163,9 @@
     }
     .game-row.has-detail .game-row-main { cursor: pointer; }
     .game-row.has-detail .game-row-main:hover { background: var(--hover); border-radius: 4px; }
-    .game-row .team-home { text-align: right; font-weight: 600; font-size: 0.95rem; }
-    .game-row .team-away { text-align: left;  font-weight: 600; font-size: 0.95rem; }
+    .game-row .team-home { display:flex; align-items:center; justify-content:flex-end; gap:6px; font-weight: 600; font-size: 0.95rem; }
+    .game-row .team-away { display:flex; align-items:center; justify-content:flex-start; gap:6px; font-weight: 600; font-size: 0.95rem; }
+    .game-row-logo { width:20px; height:20px; object-fit:contain; border-radius:2px; flex-shrink:0; }
     .team-home.highlight, .team-away.highlight { color: var(--accent); }
     .game-row .score-box { text-align: center; min-width: 90px; }
     .game-detail { padding: 10px 18px 14px; border-top: 1px solid var(--line-1); }
@@ -176,6 +184,37 @@
     .game-log .log-r { text-align: left; }
     .game-log .log-marker td { text-align: center; color: var(--ink-3); font-style: italic; padding: 5px 0; }
     .game-log s { color: var(--ink-3); }
+    .standings-wrapper { max-width: 900px; margin: 0 auto; }
+    .standings-league-title {
+      font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 3px; color: var(--ink-2); margin: 24px 0 12px 0;
+    }
+    .standings-table { width: 100%; border-collapse: collapse; }
+    .standings-table th {
+      font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--ink-3); padding: 8px 6px; border-bottom: 1px solid var(--line-0); text-align: right;
+    }
+    .standings-table th.col-team { text-align: left; }
+    .standings-table th.col-rank { text-align: right; width: 2em; }
+    .standings-table td {
+      padding: 8px 6px; border-bottom: 1px solid var(--line-1);
+      font-size: 0.85rem; text-align: right; color: var(--ink-1);
+    }
+    .standings-table td.col-team { text-align: left; font-weight: 600; color: var(--ink-0); }
+    .standings-table td.col-rank { color: var(--ink-3); font-size: 0.75rem; }
+    .standings-row-highlight td { color: var(--accent); font-weight: 700; }
+    .standings-row-restricted td { opacity: 0.55; }
+    .standings-empty { color: var(--ink-2); font-size: 0.85rem; padding: 16px 0; }
+    .team-logo { width: 24px; height: 24px; object-fit: contain; vertical-align: middle; margin-right: 5px; border-radius: 2px; }
+    .year-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .year-tab {
+      background: var(--surface-2); color: var(--ink-2); border: 1px solid var(--line-0);
+      border-radius: 6px; padding: 6px 16px; font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; letter-spacing: 1px;
+    }
+    .year-tab:hover { border-color: var(--ink-3); color: var(--ink-1); }
+    .year-tab.year-tab-active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+    .standings-year-content { /* intentionally empty — structural wrapper only */ }
     .score-box .time { font-size: 0.75rem; color: var(--ink-2); }
     .score-box .score { font-size: 1.2rem; font-weight: 900; color: var(--ink-0); }
     .score-box .score.win  { color: var(--win); }
@@ -196,15 +235,36 @@
       .detail-halves { gap: 24px; }
       .game-row .team-home, .game-row .team-away { font-size: 0.8rem; }
       .score-box .score { font-size: 1rem; }
+      .game-row-logo { display: none; }
     }
-    .more-gamedays { margin-top: 8px; }
-    .more-gamedays summary {
-      cursor: pointer; font-size: 0.8rem; font-weight: 700; color: var(--ink-2);
-      text-transform: uppercase; letter-spacing: 2px; padding: 10px 0; list-style: none;
+    .standings-table th abbr { text-decoration: none; cursor: default; }
+    .standings-table th .th-full { display: inline; }
+    .standings-table th .th-abbr { display: none; }
+    /* Standings table: abbreviate headers at ≤700px; hide EP+GP at ≤480px; hide Sp+U+PD at ≤360px */
+    /* Column order: 1=Pl 2=Mannschaft 3=Sp 4=S 5=U 6=N 7=EP 8=GP 9=PD 10=SQ */
+    @media (max-width: 700px) {
+      .standings-table th .th-full { display: none; }
+      .standings-table th .th-abbr { display: inline; }
     }
-    .more-gamedays summary::-webkit-details-marker { display: none; }
-    .more-gamedays summary::before { content: ''; }
-    .more-gamedays[open] summary::before { content: ''; }
+    @media (max-width: 480px) {
+      .standings-table th:nth-child(7), .standings-table td:nth-child(7),
+      .standings-table th:nth-child(8), .standings-table td:nth-child(8) { display: none; }
+      .standings-table { font-size: 0.8rem; }
+      .standings-table td, .standings-table th { padding: 7px 4px; }
+    }
+    @media (max-width: 360px) {
+      .standings-table th:nth-child(3), .standings-table td:nth-child(3),
+      .standings-table th:nth-child(5), .standings-table td:nth-child(5),
+      .standings-table th:nth-child(9), .standings-table td:nth-child(9) { display: none; }
+    }
+    .load-more { display:block; width:100%; margin:6px 0 0; padding:6px 0;
+      background:none; border:1px solid var(--accent); border-radius:4px;
+      color:var(--accent); font-size:0.85rem; cursor:pointer; }
+    .load-more:hover { background: var(--hover); }
+    .toggle-more-future { display:block; width:100%; margin:0 0 6px; padding:6px 0;
+      background:none; border:1px solid var(--line-0); border-radius:4px;
+      color:var(--ink-2); font-size:0.85rem; cursor:pointer; }
+    .toggle-more-future:hover { background: var(--hover); color: var(--ink-1); }
     body.compact { padding: 12px; }
     body.compact .team-block { margin-bottom: 28px; }
     body.compact .gameday-card { margin-bottom: 10px; }
@@ -212,6 +272,67 @@
     body.compact .game-row-main { padding: 10px 14px; }
     body.compact .game-row .team-home, body.compact .game-row .team-away { font-size: 0.85rem; }
     body.compact .score-box .score { font-size: 1rem; }
+    /* ── LIVE TICKER ─────────────────────────────────────────────────────────────── */
+    .live-ticker-game {
+      margin-bottom: 24px;
+      background: linear-gradient(150deg, var(--surface-1), var(--surface-2));
+      border: 1px solid var(--line-0); box-shadow: var(--card-shadow);
+      border-radius: 10px; overflow: hidden;
+    }
+    .lt-header {
+      background: var(--surface-2); padding: 10px 18px; border-bottom: 1px solid var(--line-0);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .lt-live-badge {
+      background: var(--live-bg); color: var(--live-fg); font-size: 0.65rem; font-weight: 900;
+      letter-spacing: 1.5px; padding: 2px 6px; border-radius: 3px; animation: blink 1s infinite;
+    }
+    .lt-status  { font-size: 0.7rem; color: var(--ink-2); margin-left: auto; }
+    .lt-scorebar {
+      background: var(--surface-1); padding: 10px 18px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--line-1);
+    }
+    .lt-team { font-size: 0.8rem; font-weight: 700; color: var(--ink-1); }
+    .lt-team.lt-ours { color: var(--accent); }
+    .lt-score-center { text-align: center; }
+    .lt-score-val { font-size: 1.3rem; font-weight: 900; color: var(--ink-0); }
+    .lt-score-meta { font-size: 0.65rem; color: var(--ink-2); margin-top: 2px; }
+    .lt-possession { font-size: 0.65rem; color: var(--draw); margin-top: 1px; }
+    .lt-table { width: 100%; border-collapse: collapse; font-size: 0.75rem; }
+    .lt-table td { padding: 3px 10px; border-bottom: 1px solid var(--line-1); vertical-align: top; }
+    .lt-col-home { width: 44%; text-align: right; color: var(--ink-2); }
+    .lt-col-mid  { width: 12%; text-align: center; font-weight: 700; font-size: 0.7rem; color: var(--ink-3); vertical-align: middle; white-space: nowrap; }
+    .lt-col-away { width: 44%; text-align: left; color: var(--ink-2); }
+    .lt-team-label { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 1px; }
+    .lt-col-home .lt-team-label { color: var(--accent); }
+    .lt-col-away .lt-team-label { color: var(--accent-alt); }
+    .lt-scoring td { background: var(--hover); }
+    .lt-scoring .lt-col-home, .lt-scoring .lt-col-away { color: var(--ink-0); }
+    .lt-scoring .lt-col-mid { color: var(--ink-0); }
+    .lt-neutral td { text-align: center !important; color: var(--ink-3); font-style: italic; padding: 5px 8px; }
+    .lt-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; gap: 10px; }
+    .lt-empty-icon { font-size: 2.4rem; opacity: 0.25; }
+    .lt-empty-title { font-size: 0.95rem; font-weight: 700; color: var(--ink-2); }
+    .lt-empty-sub { font-size: 0.75rem; color: var(--ink-3); text-align: center; }
+    .lt-conn-error {
+      background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 6px;
+      padding: 8px 14px; color: var(--warn-ink); font-size: 0.8rem; margin-bottom: 10px;
+    }
+    @keyframes lt-flash { 0% { background: var(--hover); } 100% { background: transparent; } }
+    .lt-flash { animation: lt-flash 0.8s ease-out; }
+    /* live-banner as clickable link */
+    a.live-banner {
+      display: flex;
+      text-decoration: none;
+      color: inherit;
+      cursor: pointer;
+    }
+    a.live-banner:hover {
+      background: rgba(255, 255, 255, 0.12);
+      box-shadow: inset 3px 0 0 var(--live-fg);
+      transition: background 0.15s;
+    }
   </style>
 </head>
 <body>
@@ -219,11 +340,77 @@
 <script>
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
-var API_BASE          = 'https://leaguesphere.app/api';
-var LIVETICKER_BASE   = 'https://leaguesphere.app/liveticker/';
-var BATCH_SIZE        = 50;
-var DISCOVERY_TTL_MS  = 7 * 24 * 60 * 60 * 1000;
-var CACHE_VERSION     = 3;
+var API_BASE               = 'https://leaguesphere.app/api';
+var LIVETICKER_API         = API_BASE + '/liveticker/';
+var _liveGames             = {};    // gameId → gameState (see spec)
+var _liveInterval          = null;  // setInterval handle for polling
+
+// Team logo paths (relative, served from logos/ directory)
+var TEAM_LOGOS = {
+  20:  'logos/20.png',  // Munich Spatzen
+  22:  'logos/22.png',  // Augsburg Lions
+  23:  'logos/23.png',  // Augsburg Centurions
+  24:  'logos/24.png',  // Badener Greifs
+  25:  'logos/25.png',  // Munich Spatzen 2
+  30:  'logos/30.png',  // Walldorf Wanderers
+  32:  'logos/32.png',  // Stuttgart Scorpions
+  38:  'logos/38.gif',  // Mülheim Shamrocks
+  41:  'logos/41.png',  // Mainz Legionaries
+  43:  'logos/43.png',  // Duisburg Dragons
+  44:  'logos/44.png',  // Dortmund Giants
+  48:  'logos/48.png',  // SG Kelkheim Lizzards
+  49:  'logos/49.png',  // SG Kelkheim Lizzards II
+  52:  'logos/52.png',  // Baltic Blue Stars
+  54:  'logos/54.png',  // Lübeck Flag Cougars
+  56:  'logos/56.png',  // Black Forest Hedgehogs
+  57:  'logos/57.png',  // Heidelberg Hunters
+  69:  'logos/69.png',  // Würzburg Wombats
+  96:  'logos/96.png',  // Castrop Raptors
+  112: 'logos/112.png', // Lichtenberg Lions
+  115: 'logos/115.png', // Strelitz Dukes
+  133: 'logos/133.png', // Bornheim Badgers
+  134: 'logos/134.png', // Bedburg Raccoons
+  136: 'logos/136.svg', // Münster Blackhawks
+  138: 'logos/138.png', // Aachen Emperors
+  143: 'logos/143.png', // Cologne Falcons Flag
+  146: 'logos/146.png', // Darmstadt Diamonds
+  151: 'logos/151.png', // Regensburg Phoenix
+  159: 'logos/159.png', // Nürnberg Renegades
+  161: 'logos/161.svg', // Kornwestheim Cougars
+  163: 'logos/163.png', // Oldenburg Orcas
+  169: 'logos/169.png', // Bremen Firebirds Flags
+  223: 'logos/223.webp', // AFC Königsbrunn Ants
+  238: 'logos/238.png', // Düsseldorf Firecats
+  243: 'logos/243.png', // Erlangen Sharks
+  254: 'logos/254.png', // Munich Spatzen 4
+  269: 'logos/269.png', // Hamburg Pioneers Red Pandas
+  287: 'logos/287.png', // Nürnberg Renegades II
+  29:  'logos/29.png',  // Bamberg Phantoms
+  152: 'logos/152.png', // Ingolstadt Guardians
+  221: 'logos/221.png', // Ramsenthal RedWings
+  391: 'logos/391.png', // Rödental Racoons
+  392: 'logos/392.png', // Ingolstadt Guardians 2
+  393: 'logos/393.png', // Erlangen Sharks 2
+  492: 'logos/492.png', // Erding Bulls II
+  408: 'logos/408.png', // SV Rot-Weiß Viktoria Mitte 08
+  500: 'logos/500.png', // Neumarkt Wolves
+  501: 'logos/501.png', // Ramsenthal RedWings II
+  502: 'logos/502.png', // Neustadt Falcons
+  505: 'logos/505.png', // Regensburg Phoenix III
+  // RL Bayern
+  55:  'logos/55.png',   // Nürnberg Hawks
+  66:  'logos/66.png',   // Munich Spatzen 3
+  153: 'logos/153.png',  // Rosenheim Rebels
+  154: 'logos/154.png',  // Augsburg Lions II
+  158: 'logos/158.png',  // Neu-Ulm Spartans
+  160: 'logos/160.png',  // Erding Bulls
+  288: 'logos/288.png',  // Regensburg Phoenix II
+  289: 'logos/289.png',  // München Rangers
+  388: 'logos/388.webp', // Fursty Razorbacks
+  389: 'logos/389.png',  // Gendorf Crusaders
+  493: 'logos/493.webp', // Fursty Razorbacks II
+  494: 'logos/494.png',  // München Rangers II
+};
 
 // ── URL PARAMS ───────────────────────────────────────────────────────────────
 function parseConfigFromSearch(search) {
@@ -238,8 +425,10 @@ function parseConfigFromSearch(search) {
   var showFuture  = params.get('show_future') !== '0';
   var showTitle   = params.get('title')       !== '0';
   var compact     = params.get('compact')     === '1';
+  var view        = params.get('view') || 'spielplan';
   return { teams: teams, color: color, colorDark: colorDark, refresh: refresh, past: past, future: future,
-           showPast: showPast, showFuture: showFuture, showTitle: showTitle, compact: compact };
+           showPast: showPast, showFuture: showFuture, showTitle: showTitle, compact: compact,
+           view: view };
 }
 function parseConfig() { return parseConfigFromSearch(window.location.search); }
 
@@ -259,6 +448,49 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('de-DE', { weekday:'short', day:'2-digit', month:'2-digit', year:'numeric' });
 }
 
+function getTickPoints(text) {
+  if (text.startsWith('Touchdown'))      return 6;
+  if (text.startsWith('2-Extra-Punkte')) return /: -$/.test(text) ? 0 : 2;
+  if (text.startsWith('1-Extra-Punkt'))  return /: -$/.test(text) ? 0 : 1;
+  return 0;
+}
+
+function buildTickRows(gs) {
+  var ourName = gs.watchedSide === 'home' ? gs.homeName : gs.awayName;
+  var oppName = gs.watchedSide === 'home' ? gs.awayName : gs.homeName;
+  var runScore = { home: 0, away: 0 };
+  return (gs.ticks || []).slice().reverse().map(function(tick) {
+    if (tick.team == null) {
+      return '<tr class="lt-neutral"><td colspan="3">' + escapeHtml(tick.text) + '</td></tr>';
+    }
+    var pts = getTickPoints(tick.text);
+    if (pts > 0 && tick.team) runScore[tick.team] += pts;
+    var isOurSide = tick.team === gs.watchedSide;
+    var isScoring = pts > 0;
+    var rowClass  = isScoring ? ' class="lt-scoring"' : '';
+    var ourScore  = gs.watchedSide === 'home' ? runScore.home : runScore.away;
+    var oppScore  = gs.watchedSide === 'home' ? runScore.away : runScore.home;
+    var scoreCell = (isScoring && gs.hasFullHistory) ? escapeHtml(ourScore + ':' + oppScore) : '';
+    var label     = isScoring
+      ? '<span class="lt-team-label">' + escapeHtml(isOurSide ? ourName : oppName) + '</span>'
+      : '';
+    var evText = label + escapeHtml(tick.text);
+    if (isOurSide) {
+      return '<tr' + rowClass + '>'
+        + '<td class="lt-col-home">' + evText + '</td>'
+        + '<td class="lt-col-mid">' + scoreCell + '</td>'
+        + '<td class="lt-col-away"></td>'
+        + '</tr>';
+    } else {
+      return '<tr' + rowClass + '>'
+        + '<td class="lt-col-home"></td>'
+        + '<td class="lt-col-mid">' + scoreCell + '</td>'
+        + '<td class="lt-col-away">' + evText + '</td>'
+        + '</tr>';
+    }
+  }).join('');
+}
+
 function getResultClass(teamId, results) {
   var me    = results.find(function(r) { return r.team_id === teamId; });
   var other = results.find(function(r) { return r.team_id !== teamId; });
@@ -271,26 +503,6 @@ function getResultClass(teamId, results) {
 var _teamNameByAbbrev = {};
 function resolveTeamName(abbrev) { return _teamNameByAbbrev[abbrev] || abbrev; }
 
-function renderGameLogEvents(log, results) {
-  // Determine which of log.l / log.r is home by matching team names in results
-  var leftIsHome = null;
-  results.forEach(function(r) {
-    var full = resolveTeamName(r.team_name);
-    if (full === log.l || r.team_name === log.l) leftIsHome = r.isHome;
-  });
-
-  var rows = log.ev.map(function(ev) {
-    if (ev.b) return '<tr class="log-marker"><td colspan="3">' + escapeHtml(ev.b) + '</td></tr>';
-    var lHtml = ev.l ? (ev.lx ? '<s>' + escapeHtml(ev.l) + '</s>' : escapeHtml(ev.l)) : '';
-    var rHtml = ev.r ? (ev.rx ? '<s>' + escapeHtml(ev.r) + '</s>' : escapeHtml(ev.r)) : '';
-    return '<tr><td class="log-l">' + lHtml + '</td><td class="log-s">' + escapeHtml(ev.s || '') + '</td><td class="log-r">' + rHtml + '</td></tr>';
-  }).join('');
-
-  return '<table class="game-log">'
-    + '<thead><tr><th>' + escapeHtml(log.l) + '</th><th>Stand</th><th>' + escapeHtml(log.r) + '</th></tr></thead>'
-    + '<tbody>' + rows + '</tbody></table>';
-}
-
 var _openDetail = null;
 function _toggleGameDetail(mainEl) {
   var detail = mainEl.parentElement.querySelector('.game-detail');
@@ -298,50 +510,6 @@ function _toggleGameDetail(mainEl) {
   var isOpen = _openDetail === detail;
   if (_openDetail) { _openDetail.hidden = true; _openDetail = null; }
   if (!isOpen) { detail.hidden = false; _openDetail = detail; }
-}
-
-// ── CACHE ────────────────────────────────────────────────────────────────────
-function cacheKey(teamId) { return 'lsw_' + teamId; }
-
-function loadCache(teamId, storage) {
-  var store = storage || localStorage;
-  try {
-    var raw = store.getItem(cacheKey(teamId));
-    if (!raw) return null;
-    var cache = JSON.parse(raw);
-    if (cache.version !== CACHE_VERSION) return null;
-    return cache;
-  } catch(e) { return null; }
-}
-
-function saveCache(teamId, data, storage) {
-  var store = storage || localStorage;
-  try {
-    store.setItem(cacheKey(teamId), JSON.stringify(Object.assign({}, data, { version: CACHE_VERSION })));
-    return true;
-  } catch(e) { return false; }
-}
-
-function clearCache(teamId, storage) {
-  var store = storage || localStorage;
-  try { store.removeItem(cacheKey(teamId)); } catch(e) {}
-}
-
-function needsDiscovery(cache) {
-  if (!cache || !cache.next_discovery) return true;
-  return new Date(cache.next_discovery) <= new Date();
-}
-
-// ── CONCURRENCY ──────────────────────────────────────────────────────────────
-async function batchedAll(items, asyncFn, batchSize, onBatchDone) {
-  var results = [];
-  for (var i = 0; i < items.length; i += batchSize) {
-    var batch       = items.slice(i, i + batchSize);
-    var batchResult = await Promise.all(batch.map(asyncFn));
-    results.push.apply(results, batchResult);
-    if (onBatchDone) onBatchDone(results.length, items.length);
-  }
-  return results;
 }
 
 // ── CLASSIFICATION ───────────────────────────────────────────────────────────
@@ -377,106 +545,57 @@ async function loadSnapshot() {
   return _snapshotPromise;
 }
 
-var _newGamedaysPromise = null;
-async function fetchNewGamedays() {
-  if (!_newGamedaysPromise) {
-    _newGamedaysPromise = loadSnapshot().then(function(snap) {
-      var maxId = Math.max.apply(null, snap.gamedays.map(function(gd) { return gd.id; }));
-      return fetchJSON(API_BASE + '/gamedays/?format=json&page_size=100').then(function(d) {
-        return d.results
-          .filter(function(gd) { return gd.id > maxId; })
-          .map(function(gd) {
-            return {
-              id:             gd.id,
-              date:           gd.date,
-              name:           gd.name           || '',
-              start:          gd.start          || '',
-              league_display: gd.league_display || '',
-              address:        gd.address        || '',
-            };
-          });
-      });
-    });
-  }
-  return _newGamedaysPromise;
-}
+// ── RENDER ───────────────────────────────────────────────────────────────────
 
-async function fetchGames(gamedayId) {
-  return fetchJSON(API_BASE + '/gamedays/' + gamedayId + '/games/?format=json');
-}
-
-async function fetchGamedayDetail(gamedayId) {
-  return fetchJSON(API_BASE + '/gamedays/' + gamedayId + '/?format=json');
-}
-
-// ── DISCOVERY ────────────────────────────────────────────────────────────────
-async function discoverNewGamedays(teamId, knownIds, onProgress) {
-  var snap        = await loadSnapshot();
-  var newGds      = await fetchNewGamedays();
-  var allGamedays = snap.gamedays.concat(newGds);
-  var newGamedays = allGamedays.filter(function(gd) { return !knownIds.has(gd.id); });
-  if (newGamedays.length === 0) return [];
-
-  // Snapshot gamedays carry their games — use directly; truly new gamedays fetch from API
-  var fromSnapshot = newGamedays.filter(function(gd) { return gd.games; });
-  var needFetch    = newGamedays.filter(function(gd) { return !gd.games; });
-
-  var snapshotEntries = fromSnapshot
-    .map(function(gd) { return { gd: gd, games: gd.games }; })
-    .filter(function(e) {
-      return e.games.some(function(g) {
-        return g.results.some(function(r) { return r.team_id === teamId; });
-      });
-    });
-
-  if (needFetch.length === 0) {
-    if (onProgress) onProgress(snapshotEntries.length, snapshotEntries.length);
-    return snapshotEntries;
-  }
-
-  var fetched = await batchedAll(needFetch, async function(gd) {
-    try {
-      var games = await fetchGames(gd.id);
-      return { gd: gd, games: games };
-    } catch(e) { return null; }
-  }, BATCH_SIZE, function(done, total) {
-    if (onProgress) onProgress(snapshotEntries.length + done, snapshotEntries.length + total);
+function renderGameLogEvents(log, results) {
+  // Determine which of log.l / log.r is home by matching team names in results
+  var leftIsHome = null;
+  results.forEach(function(r) {
+    var full = resolveTeamName(r.team_name);
+    if (full === log.l || r.team_name === log.l) leftIsHome = r.isHome;
   });
 
-  return snapshotEntries.concat(
-    fetched
-      .filter(function(e) { return e !== null; })
-      .filter(function(e) {
-        return e.games.some(function(g) {
-          return g.results.some(function(r) { return r.team_id === teamId; });
-        });
-      })
-  );
+  var rows = log.ev.map(function(ev) {
+    if (ev.b) return '<tr class="log-marker"><td colspan="3">' + escapeHtml(ev.b) + '</td></tr>';
+    var lHtml = ev.l ? (ev.lx ? '<s>' + escapeHtml(ev.l) + '</s>' : escapeHtml(ev.l)) : '';
+    var rHtml = ev.r ? (ev.rx ? '<s>' + escapeHtml(ev.r) + '</s>' : escapeHtml(ev.r)) : '';
+    return '<tr><td class="log-l">' + lHtml + '</td><td class="log-s">' + escapeHtml(ev.s || '') + '</td><td class="log-r">' + rHtml + '</td></tr>';
+  }).join('');
+
+  return '<table class="game-log">'
+    + '<thead><tr><th>' + escapeHtml(log.l) + '</th><th>Stand</th><th>' + escapeHtml(log.r) + '</th></tr></thead>'
+    + '<tbody>' + rows + '</tbody></table>';
 }
 
-// ── RENDER ───────────────────────────────────────────────────────────────────
-function renderProgress(done, total) {
-  var pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  return '<div class="progress-wrap">'
-    + '<div class="progress-bar-bg"><div class="progress-bar-fg" style="width:' + pct + '%"></div></div>'
-    + '<div class="progress-label">Erkenne Spieltage… ' + done + ' / ' + total + '</div>'
-    + '</div>';
-}
-
-function renderLiveBanner(game, gd, teamId) {
-  var home = game.results.find(function(r) { return r.isHome; });
-  var away = game.results.find(function(r) { return !r.isHome; });
-  if (!home || !away) return '';
-  var homeName  = escapeHtml(resolveTeamName(home.team_name));
-  var awayName  = escapeHtml(resolveTeamName(away.team_name));
-  var gdName    = escapeHtml(gd.name);
-  var league    = escapeHtml(gd.league_display || '');
-  var tickerUrl = LIVETICKER_BASE + '?gameday=' + encodeURIComponent(gd.id);
-  return '<div class="live-banner">'
-    + '<span class="live-badge">● LIVE</span>'
-    + '<div class="live-info">' + homeName + ' vs. ' + awayName + '<br><small>' + gdName + ' · ' + league + '</small></div>'
-    + '<div class="live-score">' + (function(hs){ return (hs && hs.home != null && hs.away != null) ? hs.home + ' : ' + hs.away : '– : –'; })(game.halftime_score) + '</div>'
-    + '<a href="' + tickerUrl + '" target="_blank">🔴 Liveticker</a>'
+function renderLiveGameB3(gs) {
+  var ourName  = escapeHtml(gs.watchedSide === 'home' ? gs.homeName : gs.awayName);
+  var oppName  = escapeHtml(gs.watchedSide === 'home' ? gs.awayName : gs.homeName);
+  var ourScore = gs.watchedSide === 'home' ? gs.score.home : gs.score.away;
+  var oppScore = gs.watchedSide === 'home' ? gs.score.away : gs.score.home;
+  var scoreStr = (ourScore != null && oppScore != null)
+    ? escapeHtml(ourScore + ' : ' + oppScore) : '– : –';
+  // ourName and oppName are already escapeHtml()-processed; poss is safe for innerHTML
+  var poss = '';
+  if (gs.possession === gs.watchedSide)      poss = '🏈 ' + ourName;
+  else if (gs.possession !== null)           poss = '🏈 ' + oppName;
+  return '<div class="live-ticker-game" id="lt-game-' + gs.gameId + '">'
+    + '<div class="lt-header">'
+    +   '<span class="lt-live-badge">● LIVE</span>'
+    +   '<span class="lt-status">' + escapeHtml(gs.status) + '</span>'
+    + '</div>'
+    + '<div class="lt-scorebar">'
+    +   '<div class="lt-team lt-ours">' + ourName + '</div>'
+    +   '<div class="lt-score-center">'
+    +     '<div class="lt-score-val" id="lt-score-' + gs.gameId + '">' + scoreStr + '</div>'
+    +     '<div class="lt-score-meta">' + escapeHtml(gs.status) + '</div>'
+    +     (poss ? '<div class="lt-possession">' + poss + '</div>' : '')
+    +   '</div>'
+    +   '<div class="lt-team">' + oppName + '</div>'
+    + '</div>'
+    + '<table class="lt-table">'
+    + '<tbody id="lt-body-' + gs.gameId + '">'
+    + buildTickRows(gs)
+    + '</tbody></table>'
     + '</div>';
 }
 
@@ -495,16 +614,16 @@ function renderGameRow(game, teamId, showScore) {
   var field    = escapeHtml(String(game.field));
 
   var scoreHTML;
-  if (!showScore) {
+  if (!showScore || game.final_score === null) {
     scoreHTML = '<div class="upcoming-time">' + time + ' Uhr</div>';
   } else {
     var cls = getResultClass(teamId, game.results);
     var hs  = game.halftime_score;
     var fs  = game.final_score;
     if (!fs) {
-      scoreHTML = '<div class="score">(kein Ergebnis)</div>';
+      scoreHTML = '<div class="score" id="score-' + game.id + '">(kein Ergebnis)</div>';
     } else {
-      scoreHTML = '<div class="score ' + cls + '">' + fs.home + ' : ' + fs.away + '</div>';
+      scoreHTML = '<div class="score ' + cls + '" id="score-' + game.id + '">' + fs.home + ' : ' + fs.away + '</div>';
     }
   }
 
@@ -525,15 +644,17 @@ function renderGameRow(game, teamId, showScore) {
 
   var rowClass = detailHTML ? ' has-detail' : '';
   var clickAttr = detailHTML ? ' onclick="_toggleGameDetail(this)"' : '';
+  var homeLogo = TEAM_LOGOS[home.team_id] ? '<img src="' + TEAM_LOGOS[home.team_id] + '" class="game-row-logo" alt="" loading="lazy">' : '';
+  var awayLogo = TEAM_LOGOS[away.team_id] ? '<img src="' + TEAM_LOGOS[away.team_id] + '" class="game-row-logo" alt="" loading="lazy">' : '';
   return '<div class="game-row' + rowClass + '">'
     + '<div class="game-row-main"' + clickAttr + '>'
-    +   '<div class="team-home' + homeHL + '">' + homeName + '</div>'
+    +   '<div class="team-home' + homeHL + '"><span>' + homeName + '</span>' + homeLogo + '</div>'
     +   '<div class="score-box">'
     +     '<div class="time">' + time + ' Uhr · Feld ' + field + '</div>'
     +     scoreHTML
     +     '<div class="stage-label">' + stage + standing + '</div>'
     +   '</div>'
-    +   '<div class="team-away' + awayHL + '">' + awayName + '</div>'
+    +   '<div class="team-away' + awayHL + '">' + awayLogo + '<span>' + awayName + '</span></div>'
     + '</div>'
     + detailHTML
     + '</div>';
@@ -553,8 +674,8 @@ function renderGamedayCard(gd, games, teamId, showScore) {
   var start  = escapeHtml(gd.start);
   var league = escapeHtml(gd.league_display || '');
   var addrRaw = (gd.address || '').trim();
-  var skipAddr = ['tba','tbd','','adresse folgt'].some(function(s) { return addrRaw.toLowerCase().startsWith(s); });
-  var addr   = skipAddr ? '' : '<span>📍 ' + escapeHtml(addrRaw.split(',')[0]) + '</span>';
+  var skipAddr = !addrRaw || ['tba','tbd','adresse folgt'].some(function(s) { return addrRaw.toLowerCase().startsWith(s); });
+  var addr   = skipAddr ? '' : '<span>' + escapeHtml(addrRaw.split(',')[0]) + '</span>';
 
   return '<div class="gameday-card">'
     + '<div class="gameday-header">'
@@ -565,6 +686,8 @@ function renderGamedayCard(gd, games, teamId, showScore) {
     + rows
     + '</div>';
 }
+
+
 
 function resolveTeamAbbrev(teamId, entries) {
   for (var i = 0; i < entries.length; i++) {
@@ -577,120 +700,610 @@ function resolveTeamAbbrev(teamId, entries) {
   return String(teamId);
 }
 
-// ── LOAD TEAM ────────────────────────────────────────────────────────────────
-async function loadTeam(teamId, els, cfg) {
-  var today = new Date().toISOString().slice(0, 10);
-  var cache = loadCache(teamId);
+// ── DATA STORE ───────────────────────────────────────────────────────────────
+var DataStore = (function() {
+  var _snap        = null;
+  var _liveScores  = {};          // gameId → { home: N, away: N }
+  var _ticks       = {};          // gameId → Tick[] oldest-first
+  var _fpSets      = {};          // gameId → Set of fingerprints (dedup)
+  var _mode        = 'watching';  // 'watching' | 'live'
+  var _int         = null;
+  var _subs        = {};
+  var _watchedIds  = new Set();
+  var WATCH_MS     = 30 * 60 * 1000;
+  var LIVE_MS      = 5 * 1000;
 
-  // Show cached past data immediately (instant)
-  if (els.past && cache && cache.past && cache.past.length) {
-    var sorted = cache.past.slice().sort(function(a,b) { return b.gd.date.localeCompare(a.gd.date); });
-    els.past.innerHTML = sorted.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('');
+  function subscribe(ev, fn) {
+    if (!_subs[ev]) _subs[ev] = [];
+    _subs[ev].push(fn);
   }
 
-  // Discover new gamedays if cache expired or missing
-  if (needsDiscovery(cache)) {
-    var knownIds = new Set(
-      (cache && cache.past ? cache.past.map(function(p) { return p.id; }) : [])
-      .concat(cache && cache.active_ids ? cache.active_ids : [])
-    );
+  function emit(ev, data) {
+    (_subs[ev] || []).forEach(function(fn) { fn(data); });
+  }
 
-    if (els.future) els.future.innerHTML = renderProgress(0, 1);
-
-    var newEntries = await discoverNewGamedays(teamId, knownIds, function(done, total) {
-      if (els.future) els.future.innerHTML = renderProgress(done, total);
+  function _deriveScore(ticks) {
+    var score = new Object(); score.home = 0; score.away = 0;
+    (ticks || []).forEach(function(tick) {
+      if (tick.team == null) return;
+      var pts = getTickPoints(tick.text || '');
+      if (pts > 0) score[tick.team] += pts;
     });
+    return score;
+  }
 
-    if (!cache) cache = { past: [], active_ids: [] };
+  async function init(cfg) {
+    _snap = await loadSnapshot();
+    var today = new Date().toISOString().slice(0, 10);
+    _watchedIds = new Set();
+    _snap.gamedays.forEach(function(gd) {
+      if (gd.date !== today) return;
+      (gd.games || []).forEach(function(g) {
+        var watched = cfg.teams.some(function(tid) {
+          return g.results.some(function(r) { return r.team_id === tid; });
+        });
+        if (watched) _watchedIds.add(g.id);
+      });
+    });
+    emit('snapshot-loaded', _snap);
+    _pollNow();
+    _int = setInterval(function() { _pollNow(); }, WATCH_MS);
+  }
 
-    newEntries.forEach(function(e) {
-      var cls = classifyGameday(e.gd, e.games, teamId, today);
-      if (cls === 'past' && !cache.past.some(function(p) { return p.id === e.gd.id; })) {
-        cache.past.push({ id: e.gd.id, gd: e.gd, games: e.games });
-      } else if (cls === 'active' && cache.active_ids.indexOf(e.gd.id) === -1) {
-        cache.active_ids.push(e.gd.id);
+  function _pollNow() {
+    fetchJSON(LIVETICKER_API).then(function(data) {
+      var liveForUs = (data || []).filter(function(g) { return _watchedIds.has(g.gameId); });
+      _pollWith(_snap, _watchedIds, liveForUs);
+    }).catch(function() {});
+  }
+
+  function _pollWith(snap, watchedIds, liveForUs) {
+    if (!liveForUs || liveForUs.length === 0) return;
+
+    if (_mode === 'watching') {
+      _mode = 'live';
+      clearInterval(_int);
+      _int = setInterval(function() { _pollNow(); }, LIVE_MS);
+    }
+
+    liveForUs.forEach(function(game) {
+      var gameId   = game.gameId;
+      var known    = _ticks[gameId] || [];
+      var fps      = _fpSets[gameId] || new Set();
+      var prevLen  = known.length;
+
+      // Merge ticks (API order may be newest-first; dedup by fingerprint)
+      var incoming = game.ticks || [];
+      incoming.slice().reverse().forEach(function(tick) {
+        var fp = (tick.text || '') + '|' + (tick.time || '');
+        if (!fps.has(fp)) { fps.add(fp); known.push(tick); }
+      });
+      _ticks[gameId]  = known;
+      _fpSets[gameId] = fps;
+
+      // Derive score and emit if changed
+      var score    = _deriveScore(known);
+      var prev     = _liveScores[gameId];
+      var changed  = !prev || prev.home !== score.home || prev.away !== score.away;
+      _liveScores[gameId] = score;
+
+      if (changed) {
+        var snapGame = null;
+        (snap.gamedays || []).forEach(function(gd) {
+          (gd.games || []).forEach(function(g) { if (g.id === gameId) snapGame = g; });
+        });
+        var homeRes = snapGame && snapGame.results.find(function(r) { return r.isHome; });
+        var awayRes = snapGame && snapGame.results.find(function(r) { return !r.isHome; });
+        emit('game-score-update', {
+          gameId:    gameId,
+          homeScore: score.home,
+          awayScore: score.away,
+          homeName:  homeRes ? homeRes.team_name : '',
+          awayName:  awayRes ? awayRes.team_name : '',
+        });
+      }
+
+      // Emit new ticks
+      var newTicks = known.slice(prevLen);
+      if (newTicks.length > 0) {
+        emit('ticks-update', { gameId: gameId, newTicks: newTicks });
+
+        // Check for game over
+        var over = newTicks.some(function(t) {
+          return t.team == null && t.text === 'Spiel beendet';
+        });
+        if (over) {
+          emit('game-finished', { gameId: gameId });
+          delete _ticks[gameId];
+          delete _fpSets[gameId];
+          delete _liveScores[gameId];
+          watchedIds.delete(gameId);
+
+          if (Object.keys(_ticks).length === 0 && _mode === 'live') {
+            _mode = 'watching';
+            clearInterval(_int);
+            _int = setInterval(function() { _pollNow(); }, WATCH_MS);
+          }
+        }
       }
     });
-
-    cache.next_discovery = new Date(Date.now() + DISCOVERY_TTL_MS).toISOString();
-    cache.scanned_at     = new Date().toISOString();
   }
 
-  // Always re-fetch active gamedays for current scores/status
-  var activeEntries = (await Promise.all(
-    (cache.active_ids || []).map(async function(id) {
-      try {
-        var results = await Promise.all([fetchGamedayDetail(id), fetchGames(id)]);
-        var gd    = results[0];
-        var games = results[1];
-        gd.league_display = gd.league_display || '';
-        return { id: id, gd: gd, games: games };
-      } catch(e) { return null; }
-    })
-  )).filter(Boolean);
+  return {
+    get snapshot()    { return _snap; },
+    get liveScores()  { return _liveScores; },
+    get ticks()       { return _ticks; },
+    get _mode()       { return _mode; },
+    subscribe:        subscribe,
+    emit:             emit,
+    _deriveScore:     _deriveScore,
+    _pollWith:        _pollWith,
+    init:             init,
+  };
+})();
 
-  // Promote completed active gamedays to permanent past cache
-  var newActiveIds = [];
-  activeEntries.forEach(function(e) {
-    var cls = classifyGameday(e.gd, e.games, teamId, today);
-    if (cls === 'past') {
-      if (!cache.past.some(function(p) { return p.id === e.id; }))
-        cache.past.push({ id: e.id, gd: e.gd, games: e.games });
+function renderFutureSection(entries, teamId, visibleExtras, today) {
+  if (!entries.length) return '<div class="no-data">Keine kommenden Spieltage geplant.</div>';
+  visibleExtras = visibleExtras || 0;
+  today = today || new Date().toISOString().slice(0, 10);
+  var next      = entries[0];
+  var extras    = entries.slice(1);
+  var html      = '';
+  if (extras.length) {
+    var shown     = extras.slice(0, visibleExtras);
+    var remaining = extras.length - visibleExtras;
+    var shownHtml = shown.slice().reverse()
+      .map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, e.gd.date <= today); }).join('');
+    var buttonHtml = remaining > 0
+      ? '<button class="toggle-more-future" data-team="' + teamId + '" data-visible="' + visibleExtras + '">'
+        + 'Nächste Spieltage (' + remaining + ')'
+        + '</button>'
+      : '';
+    html = buttonHtml + shownHtml;
+  }
+  html += renderGamedayCard(next.gd, next.games, teamId, next.gd.date <= today);
+  return html;
+}
+
+function renderPastSection(pastSorted, teamId, visibleCount) {
+  if (!pastSorted.length) return '';
+  var shown = pastSorted.slice(0, visibleCount);
+  var remaining = pastSorted.length - visibleCount;
+  var buttonHtml = remaining > 0
+    ? '<button class="load-more" data-team="' + teamId + '" data-visible="' + visibleCount + '">'
+      + 'Weitere laden (' + remaining + ')'
+      + '</button>'
+    : '';
+  var html = shown.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('');
+  return html + buttonHtml;
+}
+
+// ── VIEW RENDERERS ───────────────────────────────────────────────────────────
+
+async function renderLiveView(root, cfg) {
+  // Reset any existing global live state
+  _liveGames     = {};
+  if (_liveInterval) { clearInterval(_liveInterval); _liveInterval = null; }
+
+  root.innerHTML = '<div class="lt-empty"><div class="lt-empty-icon">📡</div><div class="lt-empty-title">Kein Live-Spiel gerade.</div><div class="lt-empty-sub">Sobald ein Spiel beginnt, erscheint der Ticker hier.</div></div>';
+
+  DataStore.subscribe('ticks-update', function(data) {
+    var gameId   = data.gameId;
+    var newTicks = data.newTicks;
+
+    var cardEl = document.getElementById('lt-game-' + gameId);
+    if (!cardEl) {
+      // First tick for this game: build game state and render card
+      var snap = DataStore.snapshot;
+      var snapGame = null;
+      if (snap) {
+        snap.gamedays.forEach(function(gd) {
+          (gd.games || []).forEach(function(g) { if (g.id === gameId) snapGame = g; });
+        });
+      }
+      if (!snapGame) return;
+
+      var homeRes = snapGame.results.find(function(r) { return r.isHome; })  || {};
+      var awayRes = snapGame.results.find(function(r) { return !r.isHome; }) || {};
+
+      var watchedSide = cfg.teams.some(function(tid) { return tid === homeRes.team_id; }) ? 'home' : 'away';
+
+      var gs = {
+        gameId:       gameId,
+        homeName:     homeRes.team_name || '',
+        awayName:     awayRes.team_name || '',
+        homeLogo:     TEAM_LOGOS[homeRes.team_id] || '',
+        awayLogo:     TEAM_LOGOS[awayRes.team_id] || '',
+        watchedSide:  watchedSide,
+        score:        { home: null, away: null },
+        status:       '',
+        possession:   null,
+        ticks:        DataStore.ticks[gameId] || [],
+        hasFullHistory: false,
+      };
+      _liveGames[gameId] = gs;
+
+      // Remove empty state if present
+      var emptyEl = root.querySelector('.lt-empty');
+      if (emptyEl) root.removeChild(emptyEl);
+
+      var wrapper = document.createElement('div');
+      wrapper.innerHTML = renderLiveGameB3(gs);
+      root.insertBefore(wrapper.firstChild, root.firstChild);
     } else {
-      newActiveIds.push(e.id);
+      // Subsequent ticks: prepend new tick rows
+      var gs = _liveGames[gameId];
+      if (!gs) return;
+      gs.ticks = DataStore.ticks[gameId] || [];
+      var ticksEl = document.getElementById('lt-body-' + gameId);
+      if (ticksEl) {
+        var newRows = newTicks.map(function(tick) {
+          var tmpGs = Object.assign({}, gs, { ticks: [tick], hasFullHistory: false });
+          return buildTickRows(tmpGs);
+        }).join('');
+        // safe — buildTickRows uses escapeHtml internally
+        ticksEl.insertAdjacentHTML('afterbegin', newRows);
+      }
     }
   });
-  cache.active_ids = newActiveIds;
-  saveCache(teamId, cache);
 
-  // Resolve display name from first matching game result
-  var allEntries = cache.past.concat(activeEntries);
-  var abbrev      = resolveTeamAbbrev(teamId, allEntries);
-  if (els.title) els.title.textContent = resolveTeamName(abbrev);
+  DataStore.subscribe('game-finished', function(data) {
+    var el = document.getElementById('lt-game-' + data.gameId);
+    if (el) el.parentNode && el.parentNode.removeChild(el);
+    delete _liveGames[data.gameId];
+    if (Object.keys(_liveGames).length === 0) {
+      root.innerHTML = '<div class="lt-empty"><div class="lt-empty-icon">📡</div><div class="lt-empty-title">Kein Live-Spiel gerade.</div><div class="lt-empty-sub">Sobald ein Spiel beginnt, erscheint der Ticker hier.</div></div>';
+    }
+  });
 
-  // Live section
-  var liveItems = [];
-  activeEntries.forEach(function(e) {
-    e.games.forEach(function(g) {
-      if (g.status === 'live' && g.results.some(function(r) { return r.team_id === teamId; }))
-        liveItems.push({ game: g, gd: e.gd });
+  try {
+    await DataStore.init(cfg);
+  } catch(e) {
+    root.innerHTML = '<div class="error-banner">Fehler beim Laden.</div>';
+  }
+}
+
+async function renderSpielplan(root, cfg) {
+  // Build team DOM blocks
+  var elMap = {};
+  cfg.teams.forEach(function(teamId) {
+    var block = document.createElement('div');
+    block.className = 'team-block';
+    block.innerHTML =
+      (cfg.showTitle ? '<div class="team-title" id="t-title-' + teamId + '"></div>' : '')
+      + (cfg.showFuture
+          ? '<div id="t-future-' + teamId + '"><div class="loading">Lade Daten…</div></div>'
+          : '')
+      + (cfg.showPast
+          ? '<div id="t-past-' + teamId + '"><div class="loading">Lade Daten…</div></div>'
+          : '');
+    root.appendChild(block);
+    elMap[teamId] = {
+      title:  document.getElementById('t-title-'  + teamId),
+      past:   document.getElementById('t-past-'   + teamId),
+      future: document.getElementById('t-future-' + teamId),
+    };
+  });
+
+  // Subscribe to snapshot, then render
+  DataStore.subscribe('snapshot-loaded', function(snap) {
+    var today = new Date().toISOString().slice(0, 10);
+    cfg.teams.forEach(function(teamId) {
+      var els = elMap[teamId];
+      var forTeam = snap.gamedays.filter(function(gd) {
+        return gd.games && gd.games.some(function(g) {
+          return g.results.some(function(r) { return r.team_id === teamId; });
+        });
+      });
+      var past = forTeam
+        .filter(function(gd) { return classifyGameday(gd, gd.games, teamId, today) === 'past'; })
+        .sort(function(a, b) { return b.date.localeCompare(a.date); })
+        .map(function(gd) { return { id: gd.id, gd: gd, games: gd.games }; });
+      var future = forTeam
+        .filter(function(gd) { return classifyGameday(gd, gd.games, teamId, today) !== 'past'; })
+        .sort(function(a, b) { return a.date.localeCompare(b.date); })
+        .map(function(gd) { return { id: gd.id, gd: gd, games: gd.games }; });
+      var cappedFuture = (cfg.future > 0) ? future.slice(0, cfg.future) : future;
+
+      var snapTeam = snap.teams.find(function(t) { return t.id === teamId; });
+      if (els.title && snapTeam) els.title.textContent = snapTeam.name;
+      if (els.past)   els.past.innerHTML   = renderPastSection(past, teamId, cfg.past);
+      if (els.future) els.future.innerHTML = renderFutureSection(cappedFuture, teamId, 0, today);
     });
   });
-  if (liveItems.length) {
-    els.live.innerHTML = '<div class="section-title">🔴 Live jetzt</div>'
-      + liveItems.map(function(x) { return renderLiveBanner(x.game, x.gd, teamId); }).join('');
-  } else {
-    els.live.innerHTML = '';
-  }
 
-  // Past section
-  if (els.past) {
-    var pastSorted = cache.past.slice().sort(function(a,b) { return b.gd.date.localeCompare(a.gd.date); });
-    if (!pastSorted.length) {
-      els.past.innerHTML = '<div class="no-data">Keine vergangenen Spieltage gefunden.</div>';
-    } else {
-      var visible = pastSorted.slice(0, cfg.past);
-      var hidden  = pastSorted.slice(cfg.past);
-      var html    = visible.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('');
-      if (hidden.length) {
-        html += '<details class="more-gamedays"><summary>' + hidden.length + ' ältere Spieltage</summary>'
-          + hidden.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, true); }).join('')
-          + '</details>';
-      }
-      els.past.innerHTML = html;
+  // Subscribe to live score updates
+  DataStore.subscribe('game-score-update', function(data) {
+    var el = document.getElementById('score-' + data.gameId);
+    if (!el) return;
+    el.textContent = data.homeScore + ' : ' + data.awayScore;
+  });
+
+  DataStore.subscribe('game-finished', function(data) {
+    var el = document.getElementById('score-' + data.gameId);
+    if (el) el.classList.add('score-final');
+  });
+
+  // Click delegation — "Weitere laden" and future toggle
+  root.addEventListener('click', function(e) {
+    var snap = DataStore.snapshot;
+    if (!snap) return;
+    var today = new Date().toISOString().slice(0, 10);
+
+    var btn = e.target.closest('.load-more');
+    if (btn) {
+      var teamId     = parseInt(btn.getAttribute('data-team'), 10);
+      var newVisible = parseInt(btn.getAttribute('data-visible'), 10) + 3;
+      var pastEl     = document.getElementById('t-past-' + teamId);
+      if (!pastEl) return;
+      var past = snap.gamedays
+        .filter(function(gd) {
+          return gd.games && gd.games.some(function(g) {
+            return g.results.some(function(r) { return r.team_id === teamId; });
+          }) && classifyGameday(gd, gd.games, teamId, today) === 'past';
+        })
+        .sort(function(a, b) { return b.date.localeCompare(a.date); })
+        .map(function(gd) { return { id: gd.id, gd: gd, games: gd.games }; });
+      pastEl.innerHTML = renderPastSection(past, teamId, newVisible);
+      return;
     }
-  }
 
-  // Future/active section
-  if (els.future) {
-    var futureEntries = activeEntries
-      .filter(function(e) { return classifyGameday(e.gd, e.games, teamId, today) === 'active'; })
-      .sort(function(a,b) { return a.gd.date.localeCompare(b.gd.date); });
-    if (cfg.future > 0) futureEntries = futureEntries.slice(0, cfg.future);
-    els.future.innerHTML = futureEntries.length
-      ? futureEntries.map(function(e) { return renderGamedayCard(e.gd, e.games, teamId, false); }).join('')
-      : '<div class="no-data">Keine kommenden Spieltage geplant.</div>';
+    var fBtn = e.target.closest('.toggle-more-future');
+    if (fBtn) {
+      var teamId     = parseInt(fBtn.getAttribute('data-team'), 10);
+      var newVisible = parseInt(fBtn.getAttribute('data-visible'), 10) + 3;
+      var futureEl   = document.getElementById('t-future-' + teamId);
+      if (!futureEl) return;
+      var future = snap.gamedays
+        .filter(function(gd) {
+          return gd.games && gd.games.some(function(g) {
+            return g.results.some(function(r) { return r.team_id === teamId; });
+          }) && classifyGameday(gd, gd.games, teamId, today) !== 'past';
+        })
+        .sort(function(a, b) { return a.date.localeCompare(b.date); })
+        .map(function(gd) { return { id: gd.id, gd: gd, games: gd.games }; });
+      var cappedFuture = (cfg.future > 0) ? future.slice(0, cfg.future) : future;
+      futureEl.innerHTML = renderFutureSection(cappedFuture, teamId, newVisible, today);
+    }
+  });
+
+  try {
+    await DataStore.init(cfg);
+  } catch(err) {
+    cfg.teams.forEach(function(teamId) {
+      var els = elMap[teamId];
+      var errBanner = '<div class="error-banner">Fehler beim Laden: ' + escapeHtml(err.message) + '</div>';
+      if (els.future) els.future.innerHTML = errBanner;
+      if (els.past)   els.past.innerHTML   = errBanner;
+    });
   }
+}
+
+function renderStandingsTable(entry, teamIds, liveTeamIds) {
+  liveTeamIds = liveTeamIds || new Set();
+  if (!entry.rows || entry.rows.length === 0) {
+    return '<div class="standings-empty">Keine Tabellendaten verfügbar.</div>';
+  }
+  var thead = '<thead><tr>'
+    + '<th class="col-rank">#</th>'
+    + '<th class="col-team">Mannschaft</th>'
+    + '<th><span class="th-full">Spiele</span><abbr class="th-abbr" title="Spiele">Sp</abbr></th>'
+    + '<th><span class="th-full">Siege</span><abbr class="th-abbr" title="Siege">S</abbr></th>'
+    + '<th><span class="th-full">Unentschieden</span><abbr class="th-abbr" title="Unentschieden">U</abbr></th>'
+    + '<th><span class="th-full">Niederlagen</span><abbr class="th-abbr" title="Niederlagen">N</abbr></th>'
+    + '<th><span class="th-full">Punkte erzielt</span><abbr class="th-abbr" title="Punkte erzielt">EP</abbr></th>'
+    + '<th><span class="th-full">Punkte kassiert</span><abbr class="th-abbr" title="Punkte kassiert">GP</abbr></th>'
+    + '<th><span class="th-full">Differenz</span><abbr class="th-abbr" title="Differenz">+/−</abbr></th>'
+    + '<th><span class="th-full">Siegquote</span><abbr class="th-abbr" title="Siegquote">SQ</abbr></th>'
+    + '</tr></thead>';
+  var restricted = entry.promotion_restricted || [];
+  var rows = entry.rows.map(function(row, i) {
+    var cls = '';
+    if (teamIds.indexOf(row.team_id) >= 0) cls += ' standings-row-highlight';
+    if (restricted.indexOf(row.team_id) >= 0) cls += ' standings-row-restricted';
+    var liveBadge = liveTeamIds.has(row.team_id)
+      ? '<span class="standings-live-badge">⚡</span>' : '';
+    return '<tr id="row-' + row.team_id + '" class="' + cls.trim() + '">'
+      + '<td class="col-rank">' + (i + 1) + '.</td>'
+      + '<td class="col-team">'
+      + (TEAM_LOGOS[row.team_id] ? '<img src="' + TEAM_LOGOS[row.team_id] + '" class="team-logo" alt="" loading="lazy">' : '')
+      + liveBadge + escapeHtml(resolveTeamName(row.team_name)) + '</td>'
+      + '<td>' + row.Sp + '</td>'
+      + '<td>' + row.S  + '</td>'
+      + '<td>' + row.U  + '</td>'
+      + '<td>' + row.N  + '</td>'
+      + '<td>' + row.EP + '</td>'
+      + '<td>' + row.GP + '</td>'
+      + '<td>' + row.PD + '</td>'
+      + '<td>' + row.SQ.toFixed(4) + '</td>'
+      + '</tr>';
+  }).join('');
+  return '<table class="standings-table">' + thead + '<tbody>' + rows + '</tbody></table>';
+}
+
+// Module-level state for year switching (set by renderTableView)
+var _standingsAllEntries = [];
+var _standingsTeams = [];
+var _standingsRoot = null;
+
+function _renderStandingsForYear(allEntries, year, teams) {
+  var entries = allEntries.filter(function(e) { return e.year === year; });
+  var teamEntries = entries.filter(function(e) {
+    return e.entry.rows.some(function(r) { return teams.indexOf(r.team_id) >= 0; });
+  });
+  var toRender = teamEntries.length > 0 ? teamEntries : entries;
+  var html = '';
+  toRender.forEach(function(e) {
+    html += '<div class="standings-league-title">' + escapeHtml(e.entry.name) + '</div>';
+    html += renderStandingsTable(e.entry, teams);
+  });
+  return html || '<div class="standings-empty">Keine Tabellendaten für ' + escapeHtml(String(year)) + '.</div>';
+}
+
+function _groupLeaguesFromSnapshot(snap, teamIds) {
+  var leagueMap = {};
+  (snap.gamedays || []).forEach(function(gd) {
+    var teamPlays = gd.games && gd.games.some(function(g) {
+      return g.results.some(function(r) { return teamIds.indexOf(r.team_id) >= 0; });
+    });
+    if (!teamPlays) return;
+    var key = (gd.league_display || 'Unbekannt');
+    if (!leagueMap[key]) leagueMap[key] = [];
+    leagueMap[key].push(gd);
+  });
+  return Object.keys(leagueMap).sort().map(function(league) {
+    return { league: league, gamedays: leagueMap[league] };
+  });
+}
+
+function _applyLiveScore(row, liveScore, isHome) {
+  var myScore  = isHome ? liveScore.homeScore : liveScore.awayScore;
+  var oppScore = isHome ? liveScore.awayScore : liveScore.homeScore;
+  var won  = myScore > oppScore;
+  var drew = myScore === oppScore;
+  var newSp = row.Sp + 1;
+  var newS  = row.S  + (won  ? 1 : 0);
+  var newU  = row.U  + (drew ? 1 : 0);
+  var newN  = row.N  + (!won && !drew ? 1 : 0);
+  var newEP = row.EP + myScore;
+  var newGP = row.GP + oppScore;
+  var sq    = newSp > 0 ? parseFloat(((2 * newS + newU) / (2 * newSp)).toFixed(4)) : 0;
+  return Object.assign({}, row, { Sp: newSp, S: newS, U: newU, N: newN, EP: newEP, GP: newGP, SQ: sq });
+}
+
+async function renderTableView(root, cfg) {
+  root.innerHTML = '<div class="loading">Lade Tabelle…</div>';
+
+  DataStore.subscribe('snapshot-loaded', function(snap) {
+    _renderTableFromSnap(root, snap, cfg.teams);
+  });
+
+  DataStore.subscribe('game-score-update', function(data) {
+    var snap = DataStore.snapshot;
+    if (!snap) return;
+
+    // Find which teams are in this game and whether they are home or away
+    var gameTeams = [];  // [{ team_id, isHome }]
+    snap.gamedays.forEach(function(gd) {
+      (gd.games || []).forEach(function(g) {
+        if (g.id !== data.gameId) return;
+        (g.results || []).forEach(function(r) {
+          gameTeams.push({ team_id: r.team_id, isHome: r.isHome });
+        });
+      });
+    });
+
+    gameTeams.forEach(function(teamInfo) {
+      var rowEl = document.getElementById('row-' + teamInfo.team_id);
+      if (!rowEl) return;
+
+      // Add live class + badge if not already there
+      rowEl.classList.add('standings-row-live');
+      if (!rowEl.querySelector('.standings-live-badge')) {
+        var td = rowEl.querySelector('.col-team');
+        if (td) {
+          // safe — hardcoded literal, not user data
+          td.insertAdjacentHTML('afterbegin', '<span class="standings-live-badge">⚡</span>');
+        }
+      }
+
+      // Find base row stats from snap.standings
+      var baseRow = null;
+      if (snap.standings) {
+        Object.keys(snap.standings).forEach(function(slug) {
+          Object.keys(snap.standings[slug]).forEach(function(year) {
+            var entry = snap.standings[slug][year];
+            (entry.rows || []).forEach(function(r) {
+              if (r.team_id === teamInfo.team_id && !baseRow) baseRow = r;
+            });
+          });
+        });
+      }
+      if (!baseRow) return;
+
+      // Compute live-adjusted stats
+      var liveScore = { homeScore: data.homeScore, awayScore: data.awayScore };
+      var updatedRow = _applyLiveScore(baseRow, liveScore, teamInfo.isHome);
+
+      // Update stat cells by column index: rank(0), team(1), Sp(2), S(3), U(4), N(5), EP(6), GP(7), PD(8), SQ(9)
+      var cells = rowEl.querySelectorAll('td');
+      if (cells.length >= 10) {
+        cells[2].textContent = updatedRow.Sp;
+        cells[3].textContent = updatedRow.S;
+        cells[4].textContent = updatedRow.U;
+        cells[5].textContent = updatedRow.N;
+        cells[6].textContent = updatedRow.EP;
+        cells[7].textContent = updatedRow.GP;
+        cells[8].textContent = updatedRow.EP - updatedRow.GP;  // PD
+        cells[9].textContent = updatedRow.SQ.toFixed(4);
+      }
+    });
+  });
+
+  DataStore.subscribe('game-finished', function(data) {
+    var snap = DataStore.snapshot;
+    if (!snap) return;
+    snap.gamedays.forEach(function(gd) {
+      (gd.games || []).forEach(function(g) {
+        if (g.id !== data.gameId) return;
+        g.results.forEach(function(r) {
+          var rowEl = document.getElementById('row-' + r.team_id);
+          if (!rowEl) return;
+          rowEl.classList.remove('standings-row-live');
+          var badge = rowEl.querySelector('.standings-live-badge');
+          if (badge) badge.parentNode.removeChild(badge);
+        });
+      });
+    });
+  });
+
+  try {
+    await DataStore.init(cfg);
+  } catch(e) {
+    root.innerHTML = '<div class="error-banner">Fehler beim Laden der Tabelle.</div>';
+  }
+}
+
+function _renderTableFromSnap(root, snap, teamIds) {
+  var leagues = _groupLeaguesFromSnapshot(snap, teamIds);
+  if (leagues.length === 0) {
+    root.innerHTML = '<div class="no-data">Keine Tabellendaten verfügbar.</div>';
+    return;
+  }
+  var html = '<div class="standings-wrapper">';
+  leagues.forEach(function(lg) {
+    html += '<div class="standings-league-title">' + escapeHtml(lg.league) + '</div>';
+    // Find precomputed standings entry for this league
+    var entry = null;
+    if (snap.standings) {
+      var phase = null;
+      lg.gamedays.forEach(function(gd) { if (gd.phase && !phase) phase = gd.phase; });
+      if (phase) {
+        Object.keys(snap.standings).forEach(function(slug) {
+          Object.keys(snap.standings[slug]).forEach(function(year) {
+            var e = snap.standings[slug][year];
+            if (e.name === phase && !entry) entry = e;
+          });
+        });
+      }
+    }
+    if (entry) {
+      html += renderStandingsTable(entry, teamIds, new Set());
+    }
+    // Upcoming fixtures below table
+    var upcoming = lg.gamedays.filter(function(gd) {
+      return (gd.games || []).some(function(g) { return g.final_score === null; });
+    });
+    if (upcoming.length > 0) {
+      html += '<div class="standings-league-title" style="font-size:0.75rem;margin-top:12px;">Ausstehende Spiele</div>';
+      upcoming.forEach(function(gd) {
+        html += '<div class="gameday-upcoming">'
+          + escapeHtml(formatDate(gd.date)) + ' — ' + escapeHtml(gd.name) + '</div>';
+      });
+    }
+  });
+  html += '</div>';
+  root.innerHTML = html;
 }
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
@@ -706,46 +1319,15 @@ async function loadTeam(teamId, els, cfg) {
     return;
   }
 
-  if (cfg.refresh) cfg.teams.forEach(function(id) { clearCache(id); });
+  var root = document.getElementById('root');
 
-  var root   = document.getElementById('root');
-  var elMap  = {};
-
-  cfg.teams.forEach(function(teamId) {
-    var block = document.createElement('div');
-    block.className = 'team-block';
-    block.innerHTML =
-      (cfg.showTitle ? '<div class="team-title" id="t-title-' + teamId + '">Team ' + teamId + '</div>' : '')
-      + '<div id="t-live-' + teamId + '"></div>'
-      + (cfg.showPast
-          ? '<div class="section-title">Vergangene Spieltage</div>'
-            + '<div id="t-past-' + teamId + '"><div class="loading">Lade Daten…</div></div>'
-          : '')
-      + (cfg.showFuture
-          ? '<div class="section-title">Kommende Spieltage</div>'
-            + '<div id="t-future-' + teamId + '"><div class="loading">Lade Daten…</div></div>'
-          : '');
-    root.appendChild(block);
-    elMap[teamId] = {
-      title:  document.getElementById('t-title-'  + teamId),
-      live:   document.getElementById('t-live-'   + teamId),
-      past:   document.getElementById('t-past-'   + teamId),
-      future: document.getElementById('t-future-' + teamId),
-    };
-  });
-
-  await Promise.all(cfg.teams.map(async function(teamId) {
-    try {
-      await loadTeam(teamId, elMap[teamId], cfg);
-    } catch(err) {
-      console.error('Widget error (team ' + teamId + '):', err);
-      var errBanner = '<div class="error-banner">Fehler beim Laden: ' + escapeHtml(err.message) + '</div>';
-      if (elMap[teamId].future) elMap[teamId].future.innerHTML = errBanner;
-      if (elMap[teamId].past && elMap[teamId].past.querySelector('.loading'))
-        elMap[teamId].past.innerHTML = errBanner;
-    }
-  }));
-
+  if (cfg.view === 'live') {
+    await renderLiveView(root, cfg);
+  } else if (cfg.view === 'table') {
+    await renderTableView(root, cfg);
+  } else {
+    await renderSpielplan(root, cfg);
+  }
 })();
 
 function reportHeight() {
