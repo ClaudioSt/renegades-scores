@@ -1,0 +1,52 @@
+name: Sync fork with upstream
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 08:00 CEST (07:00 CET in winter)
+  workflow_dispatch:
+  # Lets upstream trigger an immediate sync, if it ever sends a repository_dispatch.
+  repository_dispatch:
+    types: [upstream-push]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-upstream
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_URL: https://github.com/ClaudioSt/renegades-scores.git
+  BRANCH: master
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+          # PAT with "workflow" scope, so upstream changes under .github/workflows can be pushed.
+          token: ${{ secrets.SYNC_TOKEN || secrets.GITHUB_TOKEN }}
+
+      - name: Merge upstream into ${{ env.BRANCH }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add upstream "$UPSTREAM_URL"
+          git fetch upstream "$BRANCH"
+
+          if git merge-base --is-ancestor "upstream/$BRANCH" HEAD; then
+            echo "Already up to date with upstream."
+            exit 0
+          fi
+
+          if ! git merge --no-edit "upstream/$BRANCH"; then
+            git merge --abort
+            echo "::error::Merge conflict with upstream/$BRANCH - resolve locally and push."
+            exit 1
+          fi
+
+          git push origin "$BRANCH"
