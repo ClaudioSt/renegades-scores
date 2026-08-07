@@ -388,7 +388,8 @@ document.getElementById('generate-btn').addEventListener('click', function() {
   document.getElementById('embed-output').value = embedCode;
   document.getElementById('preview-link').href  = src;
   document.getElementById('output-section').style.display = 'block';
-  document.getElementById('preview-frame').src              = src;
+  // Generator UI is dark, so force the preview to match.
+  document.getElementById('preview-frame').src              = src + '&theme=dark';
   document.getElementById('preview-frame-wrap').style.display = 'block';
 });
 
