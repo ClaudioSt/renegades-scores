@@ -4,32 +4,122 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spielplan Widget</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@600;700;800&display=optional" rel="stylesheet">
+  <script>
+    // Applied before first paint so the embedded widget never flashes the wrong theme.
+    (function () {
+      var ALLOWED_THEME_ORIGINS = [
+        'https://www.nuernberg-renegades.de',
+        'https://nuernberg-renegades.de',
+        'http://localhost:4200',
+        'http://localhost:4000',
+        window.location.origin
+      ];
+
+      function normalizeTheme(value) {
+        return value === 'dark' || value === 'light' ? value : null;
+      }
+
+      function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+      }
+
+      var requested = normalizeTheme(new URLSearchParams(window.location.search).get('theme'));
+      var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      applyTheme(requested || (prefersDark ? 'dark' : 'light'));
+
+      window.addEventListener('message', function (event) {
+        if (ALLOWED_THEME_ORIGINS.indexOf(event.origin) === -1) return;
+        if (event.source !== window.parent) return;
+        var data = event.data;
+        if (!data || data.type !== 'setTheme') return;
+        var theme = normalizeTheme(data.theme);
+        if (theme) applyTheme(theme);
+      });
+    })();
+  </script>
   <style>
-    :root { --accent: #ff4500; }
+    :root {
+      color-scheme: light;
+      --accent-light: #ff4500;
+      --accent-dark: #ff4500;
+      --accent: var(--accent-light);
+      --surface-1: #ffffff;
+      --surface-2: #f0f0ec;
+      --surface-3: #e5e5de;
+      --ink-0: #111318;
+      --ink-1: #46505b;
+      --ink-2: #626c78;
+      --ink-3: #8a929c;
+      --line-0: rgba(32, 34, 39, 0.18);
+      --line-1: rgba(32, 34, 39, 0.1);
+      --card-shadow: 0 10px 32px rgba(16, 35, 40, 0.08);
+      --hover: rgba(17, 19, 24, 0.05);
+      --win: #1b7f3b;
+      --loss: #c62828;
+      --draw: #a35c00;
+      --live-bg: #c62828;
+      --live-fg: #ffffff;
+      --error-bg: #fdecea;
+      --error-line: #f0bcb8;
+      --error-ink: #a52019;
+    }
+    :root[data-theme='dark'] {
+      color-scheme: dark;
+      --accent: var(--accent-dark);
+      --surface-1: #16181d;
+      --surface-2: #20232a;
+      --surface-3: #2a2e37;
+      --ink-0: #f5f5f2;
+      --ink-1: #c4c7cd;
+      --ink-2: #9aa1ab;
+      --ink-3: #6d7581;
+      --line-0: #343740;
+      --line-1: #262a32;
+      --card-shadow: none;
+      --hover: rgba(255, 255, 255, 0.05);
+      --win: #4caf50;
+      --loss: #f44336;
+      --draw: #ff9800;
+      --live-bg: #d32f2f;
+      --live-fg: #ffffff;
+      --error-bg: #2a1010;
+      --error-line: #5a2020;
+      --error-ink: #ef5350;
+    }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Segoe UI', Arial, sans-serif; background: #0d0d0d; color: #f0f0f0; padding: 20px; }
+    /* Transparent canvas so the embedding page provides the surface. */
+    html, body { background: transparent; }
+    body {
+      font-family: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: var(--ink-0); padding: 20px; -webkit-font-smoothing: antialiased;
+      transition: color 220ms ease;
+    }
     .widget-wrapper { max-width: 900px; margin: 0 auto; }
     .team-block { margin-bottom: 48px; }
     .team-title {
+      font-family: 'Sora', 'Manrope', sans-serif;
       font-size: 1.6rem; font-weight: 800; color: var(--accent);
       text-transform: uppercase; letter-spacing: 2px;
       margin-bottom: 24px; padding-bottom: 8px; border-bottom: 2px solid var(--accent);
     }
     .section-title {
       font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
-      letter-spacing: 3px; color: #888; margin: 24px 0 12px 0;
+      letter-spacing: 3px; color: var(--ink-2); margin: 24px 0 12px 0;
     }
     .progress-wrap { margin: 12px 0; }
-    .progress-bar-bg { background: #222; border-radius: 4px; height: 6px; overflow: hidden; }
+    .progress-bar-bg { background: var(--surface-2); border-radius: 4px; height: 6px; overflow: hidden; }
     .progress-bar-fg { background: var(--accent); height: 6px; border-radius: 4px; transition: width 0.2s ease; }
-    .progress-label { font-size: 0.75rem; color: #666; margin-top: 6px; }
+    .progress-label { font-size: 0.75rem; color: var(--ink-2); margin-top: 6px; }
     .live-banner {
-      background: #ff0000; color: #fff; border-radius: 8px;
+      background: var(--live-bg); color: var(--live-fg); border-radius: 8px;
       padding: 16px 20px; margin-bottom: 12px;
       display: flex; align-items: center; justify-content: space-between; gap: 12px;
     }
     .live-banner .live-badge {
-      background: #fff; color: #ff0000; font-weight: 900;
+      background: var(--live-fg); color: var(--live-bg); font-weight: 900;
       font-size: 0.7rem; letter-spacing: 2px; padding: 3px 8px;
       border-radius: 4px; animation: blink 1s infinite;
     }
@@ -37,26 +127,27 @@
     .live-banner .live-info { flex: 1; font-size: 1rem; font-weight: 600; }
     .live-banner .live-score { font-size: 1.4rem; font-weight: 900; }
     .live-banner a {
-      background: #fff; color: #ff0000; text-decoration: none;
+      background: var(--live-fg); color: var(--live-bg); text-decoration: none;
       font-weight: 700; font-size: 0.8rem; padding: 8px 14px;
       border-radius: 6px; white-space: nowrap;
     }
     .gameday-card {
-      background: #1a1a1a; border: 1px solid #2a2a2a;
+      background: linear-gradient(150deg, var(--surface-1), var(--surface-2));
+      border: 1px solid var(--line-0); box-shadow: var(--card-shadow);
       border-radius: 10px; margin-bottom: 16px; overflow: hidden;
     }
     .gameday-header {
-      background: #222; padding: 12px 18px;
+      background: var(--surface-2); padding: 12px 18px;
       display: flex; align-items: center; justify-content: space-between;
-      gap: 12px; border-bottom: 1px solid #333;
+      gap: 12px; border-bottom: 1px solid var(--line-0);
     }
-    .gameday-header .gd-name { font-weight: 700; font-size: 1rem; color: #fff; }
-    .gameday-header .gd-meta { font-size: 0.75rem; color: #888; display: flex; gap: 12px; }
+    .gameday-header .gd-name { font-family: 'Sora', 'Manrope', sans-serif; font-weight: 700; font-size: 1rem; color: var(--ink-0); }
+    .gameday-header .gd-meta { font-size: 0.75rem; color: var(--ink-2); display: flex; gap: 12px; }
     .gameday-header .gd-league {
-      background: #333; color: #ccc; padding: 2px 8px;
+      background: var(--surface-3); color: var(--ink-1); padding: 2px 8px;
       border-radius: 4px; font-size: 0.7rem; font-weight: 600;
     }
-    .game-row { border-bottom: 1px solid #222; }
+    .game-row { border-bottom: 1px solid var(--line-1); }
     .game-row:last-child { border-bottom: none; }
     .game-row-main {
       padding: 14px 18px; display: grid;
@@ -64,40 +155,40 @@
       gap: 12px;
     }
     .game-row.has-detail .game-row-main { cursor: pointer; }
-    .game-row.has-detail .game-row-main:hover { background: rgba(255,255,255,0.04); border-radius: 4px; }
+    .game-row.has-detail .game-row-main:hover { background: var(--hover); border-radius: 4px; }
     .game-row .team-home { text-align: right; font-weight: 600; font-size: 0.95rem; }
     .game-row .team-away { text-align: left;  font-weight: 600; font-size: 0.95rem; }
     .team-home.highlight, .team-away.highlight { color: var(--accent); }
     .game-row .score-box { text-align: center; min-width: 90px; }
-    .game-detail { padding: 10px 18px 14px; border-top: 1px solid #1c1c1c; }
+    .game-detail { padding: 10px 18px 14px; border-top: 1px solid var(--line-1); }
     .detail-halves { display: flex; gap: 40px; margin-bottom: 12px; }
     .game-detail .half { display: flex; flex-direction: column; gap: 3px; }
-    .game-detail .half-label { font-size: 0.65rem; color: #555; text-transform: uppercase; letter-spacing: 1px; }
-    .game-detail .half-score { font-size: 0.9rem; font-weight: 700; color: #ccc; }
+    .game-detail .half-label { font-size: 0.65rem; color: var(--ink-3); text-transform: uppercase; letter-spacing: 1px; }
+    .game-detail .half-score { font-size: 0.9rem; font-weight: 700; color: var(--ink-1); }
     .game-log { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 4px; }
-    .game-log th { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: #555; padding: 4px 6px; border-bottom: 1px solid #222; }
+    .game-log th { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: var(--ink-3); padding: 4px 6px; border-bottom: 1px solid var(--line-1); }
     .game-log th:first-child { text-align: right; }
     .game-log th:last-child  { text-align: left; }
     .game-log th:nth-child(2) { text-align: center; min-width: 52px; }
-    .game-log td { padding: 2px 6px; color: #888; vertical-align: middle; }
+    .game-log td { padding: 2px 6px; color: var(--ink-2); vertical-align: middle; }
     .game-log .log-l { text-align: right; }
-    .game-log .log-s { text-align: center; font-weight: 700; color: #ccc; font-size: 0.82rem; white-space: nowrap; }
+    .game-log .log-s { text-align: center; font-weight: 700; color: var(--ink-1); font-size: 0.82rem; white-space: nowrap; }
     .game-log .log-r { text-align: left; }
-    .game-log .log-marker td { text-align: center; color: #444; font-style: italic; padding: 5px 0; }
-    .game-log s { color: #555; }
-    .score-box .time { font-size: 0.75rem; color: #888; }
-    .score-box .score { font-size: 1.2rem; font-weight: 900; color: #fff; }
-    .score-box .score.win  { color: #4caf50; }
-    .score-box .score.loss { color: #f44336; }
-    .score-box .score.draw { color: #ff9800; }
-    .score-box .stage-label { font-size: 0.65rem; color: #666; text-transform: uppercase; letter-spacing: 1px; }
-    .score-box .upcoming-time { font-size: 0.85rem; font-weight: 700; color: #aaa; }
-    .no-data { color: #555; font-style: italic; font-size: 0.9rem; padding: 16px 0; }
-    .loading  { color: #555; font-size: 0.85rem; padding: 20px 0; text-align: center; }
+    .game-log .log-marker td { text-align: center; color: var(--ink-3); font-style: italic; padding: 5px 0; }
+    .game-log s { color: var(--ink-3); }
+    .score-box .time { font-size: 0.75rem; color: var(--ink-2); }
+    .score-box .score { font-size: 1.2rem; font-weight: 900; color: var(--ink-0); }
+    .score-box .score.win  { color: var(--win); }
+    .score-box .score.loss { color: var(--loss); }
+    .score-box .score.draw { color: var(--draw); }
+    .score-box .stage-label { font-size: 0.65rem; color: var(--ink-2); text-transform: uppercase; letter-spacing: 1px; }
+    .score-box .upcoming-time { font-size: 0.85rem; font-weight: 700; color: var(--ink-1); }
+    .no-data { color: var(--ink-2); font-style: italic; font-size: 0.9rem; padding: 16px 0; }
+    .loading  { color: var(--ink-2); font-size: 0.85rem; padding: 20px 0; text-align: center; }
     .error-banner {
-      background: #2a1010; border: 1px solid #5a2020;
+      background: var(--error-bg); border: 1px solid var(--error-line);
       border-radius: 8px; padding: 12px 16px;
-      color: #f44336; font-size: 0.85rem; margin-bottom: 12px;
+      color: var(--error-ink); font-size: 0.85rem; margin-bottom: 12px;
     }
     @media (max-width: 600px) {
       .game-row-main { gap: 6px; padding: 12px; }
@@ -108,7 +199,7 @@
     }
     .more-gamedays { margin-top: 8px; }
     .more-gamedays summary {
-      cursor: pointer; font-size: 0.8rem; font-weight: 700; color: #888;
+      cursor: pointer; font-size: 0.8rem; font-weight: 700; color: var(--ink-2);
       text-transform: uppercase; letter-spacing: 2px; padding: 10px 0; list-style: none;
     }
     .more-gamedays summary::-webkit-details-marker { display: none; }
@@ -139,6 +230,7 @@ function parseConfigFromSearch(search) {
   var params      = new URLSearchParams(search);
   var teams       = params.getAll('t').map(Number).filter(function(n) { return Number.isInteger(n) && n > 0; });
   var color       = (params.get('color') || 'ff4500').replace(/^#/, '');
+  var colorDark   = (params.get('color_dark') || color).replace(/^#/, '');
   var refresh     = params.has('refresh');
   var past        = Math.max(1, parseInt(params.get('past'),   10) || 3);
   var future      = Math.max(0, parseInt(params.get('future'), 10) || 0);  // 0 = all
@@ -146,7 +238,7 @@ function parseConfigFromSearch(search) {
   var showFuture  = params.get('show_future') !== '0';
   var showTitle   = params.get('title')       !== '0';
   var compact     = params.get('compact')     === '1';
-  return { teams: teams, color: color, refresh: refresh, past: past, future: future,
+  return { teams: teams, color: color, colorDark: colorDark, refresh: refresh, past: past, future: future,
            showPast: showPast, showFuture: showFuture, showTitle: showTitle, compact: compact };
 }
 function parseConfig() { return parseConfigFromSearch(window.location.search); }
@@ -604,7 +696,8 @@ async function loadTeam(teamId, els, cfg) {
 // ── INIT ─────────────────────────────────────────────────────────────────────
 (async function() {
   var cfg = parseConfig();
-  document.documentElement.style.setProperty('--accent', '#' + cfg.color);
+  document.documentElement.style.setProperty('--accent-light', '#' + cfg.color);
+  document.documentElement.style.setProperty('--accent-dark', '#' + cfg.colorDark);
   if (cfg.compact) document.body.classList.add('compact');
 
   if (cfg.teams.length === 0) {
