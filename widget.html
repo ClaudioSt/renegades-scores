@@ -204,7 +204,14 @@
     .standings-table td.col-rank { color: var(--ink-3); font-size: 0.75rem; }
     .standings-row-highlight td { color: var(--accent); font-weight: 700; }
     .standings-row-restricted td { opacity: 0.55; }
+    .standings-row-live td { background: var(--hover); }
+    .standings-live-badge { color: var(--live-bg); margin-right: 4px; animation: blink 1s infinite; }
     .standings-empty { color: var(--ink-2); font-size: 0.85rem; padding: 16px 0; }
+    .gameday-upcoming {
+      font-size: 0.8rem; color: var(--ink-2); padding: 6px 0;
+      border-bottom: 1px solid var(--line-1);
+    }
+    .gameday-upcoming:last-child { border-bottom: none; }
     .team-logo { width: 24px; height: 24px; object-fit: contain; vertical-align: middle; margin-right: 5px; border-radius: 2px; }
     .year-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
     .year-tab {
@@ -220,6 +227,8 @@
     .score-box .score.win  { color: var(--win); }
     .score-box .score.loss { color: var(--loss); }
     .score-box .score.draw { color: var(--draw); }
+    .score-box .score.score-final { animation: score-settle 600ms ease-out; }
+    @keyframes score-settle { from { background: var(--hover); } to { background: transparent; } }
     .score-box .stage-label { font-size: 0.65rem; color: var(--ink-2); text-transform: uppercase; letter-spacing: 1px; }
     .score-box .upcoming-time { font-size: 0.85rem; font-weight: 700; color: var(--ink-1); }
     .no-data { color: var(--ink-2); font-style: italic; font-size: 0.9rem; padding: 16px 0; }

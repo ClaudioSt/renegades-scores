@@ -42,11 +42,21 @@ function assertFalse(val, msg) { if (val)  throw new Error(msg || 'Expected fals
 // ── PURE FUNCTIONS UNDER TEST (paste from widget.html after each task) ──
 
 function parseConfigFromSearch(search) {
-  const params  = new URLSearchParams(search);
-  const teams   = params.getAll('t').map(Number).filter(n => Number.isInteger(n) && n > 0);
-  const color   = (params.get('color') || 'ff4500').replace(/^#/, '');
-  const refresh = params.has('refresh');
-  return { teams, color, refresh };
+  const params    = new URLSearchParams(search);
+  const teams     = params.getAll('t').map(Number).filter(n => Number.isInteger(n) && n > 0);
+  const color     = (params.get('color') || 'ff4500').replace(/^#/, '');
+  const colorDark = (params.get('color_dark') || color).replace(/^#/, '');
+  const refresh   = params.has('refresh');
+  const view      = params.get('view') || 'spielplan';
+  return { teams, color, colorDark, refresh, view };
+}
+
+function normalizeTheme(value) {
+  return value === 'dark' || value === 'light' ? value : null;
+}
+
+function resolveTheme(search, prefersDark) {
+  return normalizeTheme(new URLSearchParams(search).get('theme')) || (prefersDark ? 'dark' : 'light');
 }
 
 function escapeHtml(str) {
@@ -177,6 +187,37 @@ test('parseConfigFromSearch: ignores invalid team IDs', () => {
 });
 test('parseConfigFromSearch: empty returns no teams', () => {
   assertEqual(parseConfigFromSearch('').teams, []);
+});
+test('parseConfigFromSearch: color_dark falls back to color', () => {
+  assertEqual(parseConfigFromSearch('?t=1&color=8a5d00').colorDark, '8a5d00');
+});
+test('parseConfigFromSearch: color_dark overrides and strips #', () => {
+  assertEqual(parseConfigFromSearch('?t=1&color=8a5d00&color_dark=%23ffc03a').colorDark, 'ffc03a');
+});
+test('parseConfigFromSearch: default view is spielplan', () => {
+  assertEqual(parseConfigFromSearch('?t=1').view, 'spielplan');
+});
+test('parseConfigFromSearch: view param is honoured', () => {
+  assertEqual(parseConfigFromSearch('?t=1&view=table').view, 'table');
+});
+
+test('normalizeTheme: accepts dark and light', () => {
+  assertEqual(normalizeTheme('dark'), 'dark');
+  assertEqual(normalizeTheme('light'), 'light');
+});
+test('normalizeTheme: rejects anything else', () => {
+  assertEqual(normalizeTheme('bogus'), null);
+  assertEqual(normalizeTheme(undefined), null);
+});
+test('resolveTheme: URL param wins over system preference', () => {
+  assertEqual(resolveTheme('?theme=light', true), 'light');
+});
+test('resolveTheme: falls back to system preference', () => {
+  assertEqual(resolveTheme('?t=1', true), 'dark');
+  assertEqual(resolveTheme('?t=1', false), 'light');
+});
+test('resolveTheme: invalid param falls back to system preference', () => {
+  assertEqual(resolveTheme('?theme=bogus', true), 'dark');
 });
 
 test('escapeHtml: escapes all five XSS characters including single-quote', () => {
