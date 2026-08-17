@@ -2,7 +2,8 @@
   "ff-bl": {
     "2026": {
       "name": "FF BL 2026",
-      "gameday_ids": [832, 834, 842, 844, 845],
+      "league_display": "FF BL",
+      "exclude_gameday_ids": [],
       "promotion_restricted": [254, 492, 505],
       "standings_mode": "best7"
     }
@@ -10,21 +11,24 @@
   "rl-bayern": {
     "2026": {
       "name": "RL Bayern 2026",
-      "gameday_ids": [691, 693, 694, 695, 696, 697, 698, 699],
+      "league_display": "RL Bayern",
+      "exclude_gameday_ids": [],
       "promotion_restricted": []
     }
   },
   "dffl2": {
     "2026": {
       "name": "DKB DFFL2 2026",
-      "gameday_ids": [649, 650, 651, 652, 653, 654, 655, 656, 657, 658, 659, 660, 661, 662, 663, 664, 665, 666, 667, 668],
+      "league_display": "DFFL2",
+      "exclude_gameday_ids": [],
       "promotion_restricted": []
     }
   },
   "dkb-dffl": {
     "2026": {
       "name": "DKB DFFL 2026",
-      "gameday_ids": [632, 633, 634, 635, 636, 637, 638, 639, 641, 642, 643, 644, 645, 646, 647, 648],
+      "league_display": "DKB DFFL",
+      "exclude_gameday_ids": [887, 888],
       "promotion_restricted": []
     }
   }

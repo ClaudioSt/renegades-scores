@@ -13,7 +13,10 @@ pre-fetched daily into `snapshot.json` to avoid CORS and performance issues.
 | `generator.html` | Admin tool — team search + config → generates iframe embed code |
 | `snapshot.json` | Pre-built data cache (2.9 MB, gzipped ~560 KB by GitHub Pages) |
 | `_gen_snapshot.js` | Node.js script that builds snapshot.json — run locally or via GitHub Actions |
-| `.github/workflows/update-snapshot.yml` | Daily refresh at 3 AM UTC (5 AM CEST) |
+| `league-config.json` | Which leagues/seasons get a standings table (`league_display` + season year) |
+| `standings.js` | Computes the tables from the snapshot; result stored as `snapshot.standings` |
+| `.github/workflows/update-snapshot.yml` | Daily full refresh at 3 AM UTC (5 AM CEST) |
+| `.github/workflows/update-snapshot-live.yml` | Every 5 min, refetches only today's gamedays (6-20 Uhr Berlin time, gated in-script) |
 
 Old/prototype files not in active use: `renegades_scores.html`, `test.html`, `_snapshot.js`.
 
@@ -42,18 +45,46 @@ stored as `game.log = { l, r, ev[] }` in snapshot. Never fetch from client.
   teams: [{ id, abbrev, name, gamedays: [{id, date, name, league}] }],
   gamedays: [{
     id, date, name, start, league_display, address,
-    phase?,           // only set for gamedays in league-config.json
+    phase?,           // only set for gamedays matched by league-config.json
     games: [{
       id, status, stage, standing, scheduled, field,
       final_score, halftime_score,
       results: [{ team_id, team_name, pa, isHome }],
       log?: { l, r, ev: [{b?} | {l?, lx?, r?, rx?, s?}] }
     }]
-  }]
+  }],
+  standings: { [leagueKey]: { [year]: { name, promotion_restricted, rows: [
+    { team_id, team_name, Sp, S, U, N, EP, GP, PD, SQ }   // sorted SQ → PD → EP
+  ]}}}
 }
 ```
 
 `pa` = **points against** (what the opponent scored). Win = `me.pa < other.pa`.
+
+## Standings tables (`league-config.json`)
+
+A league only gets a table if it is listed here. Spieltage are **derived** from the
+snapshot — every gameday whose `league_display` matches and whose date falls in the
+season year — so new gamedays enter the table automatically on the next snapshot run.
+
+```json
+"ff-bl": {
+  "2026": {
+    "name": "FF BL 2026",              // phase label; must match for widget lookup
+    "league_display": "FF BL",         // matched against gameday.league_display
+    "exclude_gameday_ids": [],         // optional: playoff days kept out of the table
+    "promotion_restricted": [254]      // teams shown greyed (not eligible to promote)
+  }
+}
+```
+
+Only touch this file to **add a league/season**, to fix a `league_display` rename, or to
+exclude playoff gamedays (e.g. DKB DFFL Final 8 = 887, 888). Never list regular Spieltage
+by hand — that was the old `gameday_ids` design and it silently froze the table whenever
+a new Spieltag appeared.
+
+The widget matches a league's table via `gameday.phase === entry.name` (`widget.html:1173`),
+so `name` must stay stable while a season is running.
 
 ## Widget URL parameters
 
@@ -80,10 +111,22 @@ node _gen_snapshot.js
 
 # Rebuild mode (~15 min): keeps existing gameday data, re-fetches play-by-play + team names
 node _gen_snapshot.js --rebuild
+
+# Live mode (seconds): refetches only today's gamedays' games + logs; no-op if no
+# gameday today or outside 6-20 Uhr Berlin time (run by update-snapshot-live.yml every 5 min)
+node _gen_snapshot.js --today
+
+# Manual catch-up: refetch gamedays from the last N days (ignores the time-of-day gate)
+node _gen_snapshot.js --today --days=3
+
+# Offline (instant): re-tag phases + recompute standings from the existing snapshot,
+# no network. Use after editing league-config.json.
+node _gen_snapshot.js --recompute
 ```
 
 `--rebuild` is used when the play-by-play parsing logic changes or new past games need logs added.
 Full run is used when new gamedays appear (normally done by GitHub Actions daily).
+`--today` is used for live score polling during active gamedays (done by GitHub Actions every 5 min).
 
 ## Coding rules
 - Pure vanilla HTML/CSS/JS — no build step, no frameworks, no npm

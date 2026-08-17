@@ -367,6 +367,7 @@ document.getElementById('generate-btn').addEventListener('click', function() {
 
   var listenerCode = '<script>'
     + '\nwindow.addEventListener(\'message\',function(e){'
+    + 'if(e.origin!==\'https://claudiost.github.io\')return;'
     + 'if(e.data&&e.data.type===\'iframeHeight\'){'
     + 'var fs=document.getElementsByTagName(\'iframe\');'
     + 'for(var i=0;i<fs.length;i++){'
@@ -387,7 +388,8 @@ document.getElementById('generate-btn').addEventListener('click', function() {
   document.getElementById('embed-output').value = embedCode;
   document.getElementById('preview-link').href  = src;
   document.getElementById('output-section').style.display = 'block';
-  document.getElementById('preview-frame').src              = src;
+  // Generator UI is dark, so force the preview to match.
+  document.getElementById('preview-frame').src              = src + '&theme=dark';
   document.getElementById('preview-frame-wrap').style.display = 'block';
 });
 

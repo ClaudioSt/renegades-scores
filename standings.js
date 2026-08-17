@@ -1,9 +1,17 @@
 'use strict';
 
+const { selectSeasonGamedays } = require('./league-config.js');
+
 const BEST7_COUNT = 7;
 
 /**
  * computeStandings(leagueConfig, gamedays)
+ *
+ * Gamedays are derived from the snapshot per league season (league_display +
+ * season year, minus exclude_gameday_ids), so a newly published gameday
+ * counts towards the table on the next snapshot run without any config
+ * change. Depending on cfg.standings_mode, the season is scored either as a
+ * "sq" table (all gamedays) or "best7" (only the best 7 gamedays count).
  *
  * @param {object} leagueConfig - validated league config (from loadLeagueConfig)
  * @param {Array}  gamedays     - array of gameday objects (from snapshot.json)
@@ -17,7 +25,8 @@ function computeStandings(leagueConfig, gamedays) {
 
     for (const season of Object.keys(leagueConfig[leagueKey])) {
       const cfg = leagueConfig[leagueKey][season];
-      const gamedayIdSet = new Set(cfg.gameday_ids);
+      const seasonGamedays = selectSeasonGamedays(cfg, season, gamedays);
+      const gamedayIdSet = new Set(seasonGamedays.map(gd => gd.id));
       const mode = cfg.standings_mode || 'sq';
 
       if (mode === 'best7') {
