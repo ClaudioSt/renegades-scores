@@ -618,14 +618,14 @@ describe('renderStandingsTable', () => {
   it('column headers present: Mannschaft, Sp, S, U, N, EP, GP, PD, SQ', () => {
     const html = w.renderStandingsTable(mkEntry([mkRow()]), []);
     assert.ok(html.includes('Mannschaft'));
-    assert.ok(html.includes('<th>Sp</th>'));
-    assert.ok(html.includes('<th>S</th>'));
-    assert.ok(html.includes('<th>U</th>'));
-    assert.ok(html.includes('<th>N</th>'));
-    assert.ok(html.includes('<th>EP</th>'));
-    assert.ok(html.includes('<th>GP</th>'));
-    assert.ok(html.includes('<th>PD</th>'));
-    assert.ok(html.includes('<th>SQ</th>'));
+    assert.ok(html.includes('title="Spiele"'));
+    assert.ok(html.includes('title="Siege"'));
+    assert.ok(html.includes('title="Unentschieden"'));
+    assert.ok(html.includes('title="Niederlagen"'));
+    assert.ok(html.includes('title="Punkte erzielt"'));
+    assert.ok(html.includes('title="Punkte kassiert"'));
+    assert.ok(html.includes('title="Differenz"'));
+    assert.ok(html.includes('title="Siegquote"'));
   });
 
   it('row count matches entry.rows.length', () => {

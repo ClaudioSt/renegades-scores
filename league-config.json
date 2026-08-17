@@ -3,7 +3,8 @@
     "2026": {
       "name": "FF BL 2026",
       "gameday_ids": [832, 834, 842, 844, 845],
-      "promotion_restricted": [254, 492, 505]
+      "promotion_restricted": [254, 492, 505],
+      "standings_mode": "best7"
     }
   },
   "rl-bayern": {

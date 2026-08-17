@@ -338,6 +338,138 @@ describe('computeStandings: row sorting', () => {
   });
 });
 
+// ─── computeStandings — best7 mode ───────────────────────────────────────────
+
+describe('computeStandings: best7 — fewer than 7 gamedays counts all', () => {
+  const leagueConfig = {
+    'ff-bl': {
+      '2026': { name: 'FF BL 2026', gameday_ids: [1, 2, 3], promotion_restricted: [], standings_mode: 'best7' },
+    },
+  };
+
+  const tA = { id: 1, name: 'Team A', pa: 0 };
+  const tB = { id: 2, name: 'Team B', pa: 7 };
+  const tA2 = { id: 1, name: 'Team A', pa: 0 };
+  const tB2 = { id: 2, name: 'Team B', pa: 7 };
+  const tA3 = { id: 1, name: 'Team A', pa: 0 };
+  const tB3 = { id: 2, name: 'Team B', pa: 7 };
+  const gamedays = [
+    makeGameday(1, [makeGame(10, tA,  tB)]),
+    makeGameday(2, [makeGame(11, tA2, tB2)]),
+    makeGameday(3, [makeGame(12, tA3, tB3)]),
+  ];
+
+  it('standings_mode is best7 in output entry', () => {
+    const result = computeStandings(leagueConfig, gamedays);
+    assert.equal(result['ff-bl']['2026'].standings_mode, 'best7');
+  });
+
+  it('all 3 gamedays counted when fewer than 7', () => {
+    const result = computeStandings(leagueConfig, gamedays);
+    const rowA = result['ff-bl']['2026'].rows.find(r => r.team_id === 1);
+    assert.equal(rowA.Sp, 3, 'Sp = 3 games played');
+    assert.equal(rowA.S, 3, 'S = 3 wins');
+    assert.equal(rowA.N, 0);
+  });
+
+  it('winner ranked first by wins', () => {
+    const result = computeStandings(leagueConfig, gamedays);
+    const rows = result['ff-bl']['2026'].rows;
+    assert.equal(rows[0].team_id, 1, 'Team A (3 wins) must be first');
+    assert.equal(rows[1].team_id, 2, 'Team B (0 wins) must be second');
+  });
+
+  it('no SQ field on rows', () => {
+    const result = computeStandings(leagueConfig, gamedays);
+    const rowA = result['ff-bl']['2026'].rows.find(r => r.team_id === 1);
+    assert.equal(rowA.SQ, undefined, 'best7 rows must not have SQ');
+  });
+});
+
+describe('computeStandings: best7 — drops worst gamedays beyond top 7', () => {
+  const leagueConfig = {
+    'ff-bl': {
+      '2026': { name: 'FF BL 2026', gameday_ids: [1, 2, 3, 4, 5, 6, 7, 8], promotion_restricted: [], standings_mode: 'best7' },
+    },
+  };
+
+  // Team 1 wins at days 1-7 (S=1 each), loses at day 8 (S=0)
+  const win  = (gameId, gdId) => makeGameday(gdId, [makeGame(gameId, { id: 1, name: 'T1', pa: 0 }, { id: 2, name: 'T2', pa: 7 })]);
+  const loss = (gameId, gdId) => makeGameday(gdId, [makeGame(gameId, { id: 1, name: 'T1', pa: 14 }, { id: 2, name: 'T2', pa: 7 })]);
+
+  const gamedays = [
+    win(10, 1), win(11, 2), win(12, 3), win(13, 4),
+    win(14, 5), win(15, 6), win(16, 7),
+    loss(17, 8),
+  ];
+
+  it('T1 has S=7 — the losing gameday is dropped', () => {
+    const result = computeStandings(leagueConfig, gamedays);
+    const row = result['ff-bl']['2026'].rows.find(r => r.team_id === 1);
+    assert.equal(row.S, 7, 'only 7 wins counted (loss gameday dropped)');
+    assert.equal(row.Sp, 7, 'only 7 games counted (loss gameday dropped)');
+  });
+});
+
+describe('computeStandings: best7 — EP tiebreak when 8 gamedays all wins', () => {
+  const leagueConfig = {
+    'ff-bl': {
+      '2026': { name: 'FF BL 2026', gameday_ids: [1, 2, 3, 4, 5, 6, 7, 8], promotion_restricted: [], standings_mode: 'best7' },
+    },
+  };
+
+  // T1 wins all 8 days; days 1-7 score 14 EP each, day 8 scores 7 EP
+  const highWin = (gameId, gdId) => makeGameday(gdId, [makeGame(gameId, { id: 1, name: 'T1', pa: 0 }, { id: 2, name: 'T2', pa: 14 })]);
+  const lowWin  = (gameId, gdId) => makeGameday(gdId, [makeGame(gameId, { id: 1, name: 'T1', pa: 0 }, { id: 2, name: 'T2', pa: 7 })]);
+
+  const gamedays = [
+    highWin(10, 1), highWin(11, 2), highWin(12, 3), highWin(13, 4),
+    highWin(14, 5), highWin(15, 6), highWin(16, 7),
+    lowWin(17, 8),
+  ];
+
+  it('T1 EP = 98 — low-EP gameday (day 8) dropped by tiebreak', () => {
+    const result = computeStandings(leagueConfig, gamedays);
+    const row = result['ff-bl']['2026'].rows.find(r => r.team_id === 1);
+    assert.equal(row.EP, 98, '7 × 14 = 98; day 8 (EP=7) should be dropped');
+  });
+});
+
+describe('computeStandings: best7 — sort: wins first, EP tiebreak', () => {
+  const leagueConfig = {
+    'ff-bl': {
+      '2026': { name: 'FF BL 2026', gameday_ids: [1, 2], promotion_restricted: [], standings_mode: 'best7' },
+    },
+  };
+
+  // T1: 2 wins (day 1 + 2), T2: 1 win (day 1 only), T3: 1 win + higher EP (day 2)
+  // day 1: T1(0) vs T2(7) → T1 wins; T3 not on this day
+  // day 2: T1(0) vs T3(7) → T1 wins; T2 not on this day
+  // But we also need T2 vs T3 same-day to compare them at 1 win each...
+  // Simplify: two teams with same wins, test EP order
+  const lcSameWins = {
+    'ff-bl': { '2026': { name: 'FF BL 2026', gameday_ids: [1, 2], promotion_restricted: [], standings_mode: 'best7' } },
+  };
+
+  // T1: day1 win (EP=21), day2 loss  → S=1, EP=21 from day1
+  // T2: day1 loss, day2 win (EP=14)  → S=1, EP=14 from day2
+  const gamedays = [
+    makeGameday(1, [
+      makeGame(10, { id: 1, name: 'T1', pa: 0 }, { id: 2, name: 'T2', pa: 21 }),
+    ]),
+    makeGameday(2, [
+      makeGame(11, { id: 2, name: 'T2', pa: 0 }, { id: 1, name: 'T1', pa: 14 }),
+    ]),
+  ];
+
+  it('same wins: team with higher EP ranked first', () => {
+    const result = computeStandings(lcSameWins, gamedays);
+    const rows = result['ff-bl']['2026'].rows;
+    assert.equal(rows[0].team_id, 1, 'T1 (EP=21) must beat T2 (EP=14) on tiebreak');
+    assert.equal(rows[1].team_id, 2);
+  });
+});
+
 // ─── _applyLiveScore ──────────────────────────────────────────────────────────
 
 describe('_applyLiveScore', () => {

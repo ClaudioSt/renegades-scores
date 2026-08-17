@@ -975,6 +975,9 @@ function renderStandingsTable(entry, teamIds, liveTeamIds) {
   if (!entry.rows || entry.rows.length === 0) {
     return '<div class="standings-empty">Keine Tabellendaten verfügbar.</div>';
   }
+  var isBest7 = entry.standings_mode === 'best7';
+  /* Column order (sq):    1=Pl 2=Mannschaft 3=Sp 4=S 5=U 6=N 7=EP 8=GP 9=PD 10=SQ */
+  /* Column order (best7): 1=Pl 2=Mannschaft 3=Sp 4=S 5=U 6=N 7=EP 8=GP 9=PD */
   var thead = '<thead><tr>'
     + '<th class="col-rank">#</th>'
     + '<th class="col-team">Mannschaft</th>'
@@ -985,7 +988,7 @@ function renderStandingsTable(entry, teamIds, liveTeamIds) {
     + '<th><span class="th-full">Punkte erzielt</span><abbr class="th-abbr" title="Punkte erzielt">EP</abbr></th>'
     + '<th><span class="th-full">Punkte kassiert</span><abbr class="th-abbr" title="Punkte kassiert">GP</abbr></th>'
     + '<th><span class="th-full">Differenz</span><abbr class="th-abbr" title="Differenz">+/−</abbr></th>'
-    + '<th><span class="th-full">Siegquote</span><abbr class="th-abbr" title="Siegquote">SQ</abbr></th>'
+    + (isBest7 ? '' : '<th><span class="th-full">Siegquote</span><abbr class="th-abbr" title="Siegquote">SQ</abbr></th>')
     + '</tr></thead>';
   var restricted = entry.promotion_restricted || [];
   var rows = entry.rows.map(function(row, i) {
@@ -1006,7 +1009,7 @@ function renderStandingsTable(entry, teamIds, liveTeamIds) {
       + '<td>' + row.EP + '</td>'
       + '<td>' + row.GP + '</td>'
       + '<td>' + row.PD + '</td>'
-      + '<td>' + row.SQ.toFixed(4) + '</td>'
+      + (isBest7 ? '' : '<td>' + row.SQ.toFixed(4) + '</td>')
       + '</tr>';
   }).join('');
   return '<table class="standings-table">' + thead + '<tbody>' + rows + '</tbody></table>';
